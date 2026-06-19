@@ -8,7 +8,8 @@ Wasmee is engineered for maximum execution speed. Since guest Wasm module execut
 
 To execute Wasm tasks from remote clients, Wasmee uses an optimized **Protobuf over HTTP/1.1** protocol. By transmitting raw binary snapshots, deltas, and oplogs (bypassing Base64-encoding and JSON-parsing overhead), it drastically reduces CPU usage and loopback network bandwidth.
 
-Under full end-to-end benchmark conditions (reconstructing Wasm memory deltas, replaying execution oplogs, writing checkpoints to an in-memory store, and verifying optimistic concurrency controls), the Go Client communicating with the Rust Daemon via Protobuf achieves **368+ RPS** locally.
+Under full end-to-end benchmark conditions (reconstructing Wasm memory deltas, replaying execution oplogs, writing checkpoints to an in-memory store, and verifying optimistic concurrency controls), the Go Client communicating with the Rust Daemon via Protobuf achieves **372+ RPS** locally.
+
 
 ### Running Load Tests Locally
 
