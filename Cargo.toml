@@ -2,6 +2,7 @@
 members = [
     ".",
     "guest",
+    "examples/guest_custom",
 ]
 
 [package]

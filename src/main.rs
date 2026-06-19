@@ -28,7 +28,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .or_else(|_| std::fs::read("wasmee/target/wasm32-wasip1/release/wasmee_guest.wasm"))
         .ok();
 
-    let engine = Engine::default();
+    let mut config = wasmtime::Config::new();
+    config.consume_fuel(true);
+    let engine = Engine::new(&config).expect("failed to initialize Wasmtime engine");
     let default_module = match wasm_bytes_opt {
         Some(bytes) => match Module::new(&engine, &bytes) {
             Ok(m) => Some(m),
@@ -56,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = Router::new()
         .route("/execute", post(execute_handler))
-        .layer(axum::extract::DefaultBodyLimit::disable())
+        .layer(axum::extract::DefaultBodyLimit::max(20 * 1024 * 1024))
         .with_state(state);
 
     let http_addr = "0.0.0.0:8081";
