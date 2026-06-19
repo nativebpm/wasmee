@@ -20,16 +20,8 @@ deploy-site-test:
   rules:
     - if: '$CI_COMMIT_BRANCH == "test"'
   script:
-    - |
-      if echo "$GCP_SERVICE_KEY" | grep -q '{'; then
-        echo "$GCP_SERVICE_KEY" > gcp-key.json
-      else
-        echo "$GCP_SERVICE_KEY" | base64 -d > gcp-key.json
-      fi
-    - gcloud auth activate-service-account --key-file=gcp-key.json
-    - gcloud config set project nativebpm
-    - gcloud builds submit --gcs-source-staging-dir="gs://nativebpm-build-sources-133825711702/source" --tag us-central1-docker.pkg.dev/nativebpm/nativebpm-repo/wasmee-site-test:latest site --suppress-logs
-    - gcloud run deploy wasmee-site-test --image=us-central1-docker.pkg.dev/nativebpm/nativebpm-repo/wasmee-site-test:latest --region=us-central1 --platform=managed --allow-unauthenticated --cpu=0.25 --memory=512Mi --min-instances=0 --max-instances=2 --cpu-throttling
+    - chmod +x deploy_wasmee_site.sh
+    - ./deploy_wasmee_site.sh test
 
 deploy-site-main:
   stage: deploy
@@ -39,13 +31,5 @@ deploy-site-main:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
   script:
-    - |
-      if echo "$GCP_SERVICE_KEY" | grep -q '{'; then
-        echo "$GCP_SERVICE_KEY" > gcp-key.json
-      else
-        echo "$GCP_SERVICE_KEY" | base64 -d > gcp-key.json
-      fi
-    - gcloud auth activate-service-account --key-file=gcp-key.json
-    - gcloud config set project nativebpm
-    - gcloud builds submit --gcs-source-staging-dir="gs://nativebpm-build-sources-133825711702/source" --tag us-central1-docker.pkg.dev/nativebpm/nativebpm-repo/wasmee-site:latest site --suppress-logs
-    - gcloud run deploy wasmee-site --image=us-central1-docker.pkg.dev/nativebpm/nativebpm-repo/wasmee-site:latest --region=us-central1 --platform=managed --allow-unauthenticated --cpu=0.25 --memory=512Mi --min-instances=0 --max-instances=2 --cpu-throttling
+    - chmod +x deploy_wasmee_site.sh
+    - ./deploy_wasmee_site.sh prod
