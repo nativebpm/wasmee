@@ -20,6 +20,8 @@ struct ExecuteRequest {
     #[serde(deserialize_with = "deserialize_memory_deltas")]
     memory_deltas: HashMap<i32, Vec<u8>>,
     oplog: Vec<engine::OplogEntry>,
+    #[serde(default)]
+    exchange_buffer: Vec<u8>,
 }
 
 fn deserialize_memory_deltas<'de, D>(deserializer: D) -> Result<HashMap<i32, Vec<u8>>, D::Error>
@@ -45,6 +47,7 @@ struct ExecuteResponse {
     final_deltas: HashMap<i32, Vec<u8>>,
     final_oplog: Vec<engine::OplogEntry>,
     checkpoints: Vec<engine::CheckpointData>,
+    response_bytes: Vec<u8>,
 }
 
 fn serialize_memory_deltas<S>(map: &HashMap<i32, Vec<u8>>, serializer: S) -> Result<S::Ok, S::Error>
@@ -113,6 +116,7 @@ async fn execute_handler(
             payload.oplog,
             initial_call_index,
             wasm_store,
+            &payload.exchange_buffer,
         )
     }).await.unwrap();
 
@@ -122,5 +126,6 @@ async fn execute_handler(
         final_deltas: res.final_deltas,
         final_oplog: res.final_oplog,
         checkpoints: res.checkpoints,
+        response_bytes: res.response_bytes,
     })
 }

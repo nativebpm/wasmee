@@ -98,6 +98,7 @@ pub struct RunResult {
     pub checkpoints: Vec<CheckpointData>,
     pub crashed: bool,
     pub error: String,
+    pub response_bytes: Vec<u8>,
 }
 
 pub fn run_wasm(
@@ -110,6 +111,7 @@ pub fn run_wasm(
     initial_oplog: Vec<OplogEntry>,
     initial_call_index: i32,
     store: RustStore,
+    exchange_buffer: &[u8],
 ) -> RunResult {
     let engine = Engine::default();
     let module = match Module::new(&engine, wasm_bytes) {
@@ -120,6 +122,7 @@ pub fn run_wasm(
             checkpoints: vec![],
             crashed: true,
             error: format!("Failed to compile module: {}", e),
+            response_bytes: vec![],
         },
     };
     run_wasm_precompiled(
@@ -133,6 +136,7 @@ pub fn run_wasm(
         initial_oplog,
         initial_call_index,
         store,
+        exchange_buffer,
     )
 }
 
@@ -147,6 +151,7 @@ pub fn run_wasm_precompiled(
     initial_oplog: Vec<OplogEntry>,
     initial_call_index: i32,
     store: RustStore,
+    exchange_buffer: &[u8],
 ) -> RunResult {
     let mut linker = Linker::new(engine);
 
@@ -372,6 +377,7 @@ pub fn run_wasm_precompiled(
             checkpoints: vec![],
             crashed: true,
             error: format!("Failed to instantiate module: {}", e),
+            response_bytes: vec![],
         },
     };
 
@@ -388,6 +394,22 @@ pub fn run_wasm_precompiled(
         }
     }
 
+    // Write inputs to exchange buffer
+    let mut buf_ptr = 0usize;
+    if !exchange_buffer.is_empty() {
+        if let Some(get_buf_ptr_func) = instance.get_func(&mut store_obj, "get_exchange_buffer_pointer") {
+            let mut results = vec![wasmtime::Val::I32(0)];
+            if let Ok(_) = get_buf_ptr_func.call(&mut store_obj, &[], &mut results) {
+                if let Some(wasmtime::Val::I32(ptr)) = results.get(0) {
+                    buf_ptr = *ptr as usize;
+                    if let Some(wasmtime::Extern::Memory(m)) = instance.get_export(&mut store_obj, "memory") {
+                        m.write(&mut store_obj, buf_ptr, exchange_buffer).unwrap();
+                    }
+                }
+            }
+        }
+    }
+
     // Call entrypoint function
     let func = match instance.get_func(&mut store_obj, entrypoint) {
         Some(f) => f,
@@ -397,6 +419,7 @@ pub fn run_wasm_precompiled(
             checkpoints: vec![],
             crashed: true,
             error: format!("Entrypoint '{}' not found", entrypoint),
+            response_bytes: vec![],
         },
     };
 
@@ -424,12 +447,31 @@ pub fn run_wasm_precompiled(
 
             let (final_deltas, _) = calculate_deltas(&final_mem, &base_hashes);
 
+            let mut response_bytes = vec![];
+            let mut crashed = false;
+            let mut error = "".to_string();
+
+            if let Some(wasmtime::Val::I32(result_len)) = wasmtime_results.get(0) {
+                let len = *result_len;
+                if len < 0 {
+                    crashed = true;
+                    error = format!("WASM core execution failed with error code: {}", len);
+                } else if len > 0 {
+                    if let Some(wasmtime::Extern::Memory(m)) = instance.get_export(&mut store_obj, "memory") {
+                        let mut buf = vec![0u8; len as usize];
+                        m.read(&store_obj, buf_ptr, &mut buf).unwrap();
+                        response_bytes = buf;
+                    }
+                }
+            }
+
             RunResult {
                 final_oplog: store_obj.data().oplog.clone(),
                 final_deltas,
                 checkpoints: store_obj.data().checkpoints.clone(),
-                crashed: false,
-                error: "".to_string(),
+                crashed,
+                error,
+                response_bytes,
             }
         }
         Err(e) => RunResult {
@@ -438,6 +480,7 @@ pub fn run_wasm_precompiled(
             checkpoints: store_obj.data().checkpoints.clone(),
             crashed: true,
             error: format!("Execution failed: {}", e),
+            response_bytes: vec![],
         },
     }
 }
