@@ -6,7 +6,7 @@ test-rust:
   stage: test
   tags:
     - m5
-  image: rust:1.80-slim
+  image: rust:1.85-slim
   script:
     - cargo test --workspace
   rules:
