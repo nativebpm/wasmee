@@ -3,6 +3,27 @@ use wasmtime::{Caller, Engine, Linker, Module, Store};
 
 pub const PAGE_SIZE: usize = 65536;
 
+pub mod base64_serde {
+    use serde::{Deserialize, Deserializer, Serializer};
+    use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+
+    pub fn serialize<S>(bytes: &[u8], serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let s = BASE64.encode(bytes);
+        serializer.serialize_str(&s)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        BASE64.decode(s).map_err(serde::de::Error::custom)
+    }
+}
+
 pub fn hash_page(data: &[u8]) -> u64 {
     let mut hash: u64 = 14695981039346656037;
     for &b in data {
@@ -65,7 +86,9 @@ pub fn restore_memory(base: &[u8], deltas: &HashMap<i32, Vec<u8>>) -> Vec<u8> {
 pub struct OplogEntry {
     pub call_index: i32,
     pub api_name: String,
+    #[serde(with = "base64_serde")]
     pub request_payload: Vec<u8>,
+    #[serde(with = "base64_serde")]
     pub response_payload: Vec<u8>,
 }
 
@@ -79,6 +102,7 @@ pub struct RustStore {
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct CheckpointData {
+    #[serde(with = "base64_serde")]
     pub memory: Vec<u8>,
     pub oplog_len: usize,
 }

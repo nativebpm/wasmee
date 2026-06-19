@@ -16,11 +16,12 @@ struct ExecuteRequest {
     instance_id: String,
     entrypoint: String,
     params: Vec<u64>,
+    #[serde(with = "engine::base64_serde")]
     base_snapshot: Vec<u8>,
     #[serde(deserialize_with = "deserialize_memory_deltas")]
     memory_deltas: HashMap<i32, Vec<u8>>,
     oplog: Vec<engine::OplogEntry>,
-    #[serde(default)]
+    #[serde(default, with = "engine::base64_serde")]
     exchange_buffer: Vec<u8>,
 }
 
@@ -29,11 +30,14 @@ where
     D: serde::Deserializer<'de>,
 {
     use serde::Deserialize;
-    let map = HashMap::<String, Vec<u8>>::deserialize(deserializer)?;
+    #[derive(serde::Deserialize)]
+    struct Wrapper(#[serde(with = "engine::base64_serde")] Vec<u8>);
+
+    let map = HashMap::<String, Wrapper>::deserialize(deserializer)?;
     let mut result = HashMap::new();
     for (k, v) in map {
         if let Ok(key) = k.parse::<i32>() {
-            result.insert(key, v);
+            result.insert(key, v.0);
         }
     }
     Ok(result)
@@ -47,6 +51,7 @@ struct ExecuteResponse {
     final_deltas: HashMap<i32, Vec<u8>>,
     final_oplog: Vec<engine::OplogEntry>,
     checkpoints: Vec<engine::CheckpointData>,
+    #[serde(with = "engine::base64_serde")]
     response_bytes: Vec<u8>,
 }
 
@@ -55,9 +60,12 @@ where
     S: serde::Serializer,
 {
     use serde::ser::SerializeMap;
+    #[derive(serde::Serialize)]
+    struct Wrapper<'a>(#[serde(with = "engine::base64_serde")] &'a [u8]);
+
     let mut map_ser = serializer.serialize_map(Some(map.len()))?;
     for (k, v) in map {
-        map_ser.serialize_entry(&k.to_string(), v)?;
+        map_ser.serialize_entry(&k.to_string(), &Wrapper(v))?;
     }
     map_ser.end()
 }
