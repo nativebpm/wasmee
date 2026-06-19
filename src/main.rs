@@ -1,4 +1,6 @@
 use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::Mutex;
 use axum::{routing::post, response::IntoResponse, Router};
 use wasmtime::{Engine, Module};
 
@@ -10,26 +12,40 @@ pub mod pb {
 
 struct AppState {
     engine: Engine,
-    module: Module,
+    default_module: Option<Module>,
+    modules: Mutex<HashMap<String, Module>>,
     store: engine::RustStore,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let wasm_path = "target/wasm32-wasip1/release/wasmee_guest.wasm";
-    let wasm_bytes = std::fs::read(wasm_path)
+    let wasm_bytes_opt = std::fs::read(wasm_path)
         .or_else(|_| std::fs::read("../wasmee/target/wasm32-wasip1/release/wasmee_guest.wasm"))
         .or_else(|_| std::fs::read("../../wasmee/target/wasm32-wasip1/release/wasmee_guest.wasm"))
         .or_else(|_| std::fs::read("wasmee/target/wasm32-wasip1/release/wasmee_guest.wasm"))
-        .expect("failed to read guest WASM binary");
+        .ok();
 
     let engine = Engine::default();
-    let module = Module::new(&engine, &wasm_bytes).expect("failed to precompile guest WASM module");
+    let default_module = match wasm_bytes_opt {
+        Some(bytes) => match Module::new(&engine, &bytes) {
+            Ok(m) => Some(m),
+            Err(e) => {
+                eprintln!("Warning: failed to compile default guest WASM module: {}", e);
+                None
+            }
+        },
+        None => {
+            println!("Warning: wasmee_guest.wasm not found. Running without default module.");
+            None
+        }
+    };
     let store = engine::RustStore::default();
 
     let state = Arc::new(AppState {
         engine,
-        module,
+        default_module,
+        modules: Mutex::new(HashMap::new()),
         store,
     });
 
@@ -52,6 +68,7 @@ async fn execute_handler(
     body_bytes: axum::body::Bytes,
 ) -> impl axum::response::IntoResponse {
     use prost::Message;
+    use sha2::{Digest, Sha256};
 
     let payload = match pb::ExecuteRequest::decode(body_bytes) {
         Ok(req) => req,
@@ -65,9 +82,59 @@ async fn execute_handler(
     };
 
     let engine = state.engine.clone();
-    let module = state.module.clone();
     let wasm_store = state.store.clone();
     let initial_call_index = 0;
+
+    let module_res = if !payload.wasm_bytes.is_empty() {
+        let mut hasher = Sha256::new();
+        hasher.update(&payload.wasm_bytes);
+        let hash_hex = format!("{:x}", hasher.finalize());
+
+        let cached_module = {
+            let modules = state.modules.lock().unwrap();
+            modules.get(&hash_hex).cloned()
+        };
+
+        match cached_module {
+            Some(m) => Ok(m),
+            None => {
+                match Module::new(&engine, &payload.wasm_bytes) {
+                    Ok(m) => {
+                        let mut modules = state.modules.lock().unwrap();
+                        modules.insert(hash_hex, m.clone());
+                        Ok(m)
+                    }
+                    Err(e) => Err(format!("Failed to compile dynamic WASM module: {}", e)),
+                }
+            }
+        }
+    } else {
+        match &state.default_module {
+            Some(m) => Ok(m.clone()),
+            None => Err("No WASM module provided in request and no default guest module loaded on host".to_string()),
+        }
+    };
+
+    let module = match module_res {
+        Ok(m) => m,
+        Err(err_msg) => {
+            let resp = pb::ExecuteResponse {
+                crashed: true,
+                error: err_msg,
+                final_deltas: HashMap::new(),
+                final_oplog: vec![],
+                checkpoints: vec![],
+                response_bytes: vec![],
+            };
+            let mut buf = Vec::new();
+            let _ = resp.encode(&mut buf);
+            return (
+                axum::http::StatusCode::OK,
+                [("content-type", "application/x-protobuf")],
+                buf,
+            ).into_response();
+        }
+    };
 
     let res = tokio::task::spawn_blocking(move || {
         engine::run_wasm_precompiled(
@@ -109,4 +176,3 @@ async fn execute_handler(
         buf,
     ).into_response()
 }
-

@@ -19,7 +19,9 @@ message ExecuteRequest {
   map<int32, bytes> memory_deltas = 5;
   repeated OplogEntry oplog = 6;
   bytes exchange_buffer = 7;
+  bytes wasm_bytes = 8;
 }
+
 
 message CheckpointData {
   bytes memory = 1;
