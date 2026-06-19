@@ -15,6 +15,7 @@ struct AppState {
     default_module: Option<Module>,
     modules: RwLock<HashMap<String, Module>>,
     modules_order: Mutex<VecDeque<String>>,
+    compiling: Mutex<HashMap<String, Arc<tokio::sync::Notify>>>,
     store: engine::RustStore,
     api_token: String,
 }
@@ -30,6 +31,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut config = wasmtime::Config::new();
     config.consume_fuel(true);
+    config.cranelift_opt_level(wasmtime::OptLevel::Speed);
+    config.parallel_compilation(true);
     let engine = Engine::new(&config).expect("failed to initialize Wasmtime engine");
     let default_module = match wasm_bytes_opt {
         Some(bytes) => match Module::new(&engine, &bytes) {
@@ -52,6 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         default_module,
         modules: RwLock::new(HashMap::new()),
         modules_order: Mutex::new(VecDeque::new()),
+        compiling: Mutex::new(HashMap::new()),
         store,
         api_token,
     });
@@ -142,30 +146,60 @@ async fn execute_handler(
         match cached_module {
             Some(m) => ModuleResolveResult::Ok(m),
             None => {
-                let engine_clone = engine.clone();
-                let wasm_bytes_clone = payload.wasm_bytes.clone();
-                let compile_res = tokio::task::spawn_blocking(move || {
-                    Module::new(&engine_clone, &wasm_bytes_clone)
-                }).await.unwrap();
+                let notify = {
+                    let mut compiling = state.compiling.lock().unwrap();
+                    if let Some(n) = compiling.get(&hash_hex) {
+                        Some(n.clone())
+                    } else {
+                        let n = Arc::new(tokio::sync::Notify::new());
+                        compiling.insert(hash_hex.clone(), n);
+                        None
+                    }
+                };
 
-                match compile_res {
-                    Ok(m) => {
-                        let mut modules = state.modules.write().unwrap();
-                        let mut order = state.modules_order.lock().unwrap();
+                if let Some(n) = notify {
+                    n.notified().await;
+                    let modules = state.modules.read().unwrap();
+                    match modules.get(&hash_hex).cloned() {
+                        Some(m) => ModuleResolveResult::Ok(m),
+                        None => ModuleResolveResult::Err("Concurrent compilation failed".to_string()),
+                    }
+                } else {
+                    let engine_clone = engine.clone();
+                    let wasm_bytes_clone = payload.wasm_bytes.clone();
+                    let compile_res = tokio::task::spawn_blocking(move || {
+                        Module::new(&engine_clone, &wasm_bytes_clone)
+                    }).await.unwrap();
 
-                        if !modules.contains_key(&hash_hex) {
-                            modules.insert(hash_hex.clone(), m.clone());
-                            order.push_back(hash_hex.clone());
+                    let notify_waiters = {
+                        let mut compiling = state.compiling.lock().unwrap();
+                        compiling.remove(&hash_hex)
+                    };
 
-                            if order.len() > 100 {
-                                if let Some(oldest) = order.pop_front() {
-                                    modules.remove(&oldest);
+                    let res = match compile_res {
+                        Ok(m) => {
+                            let mut modules = state.modules.write().unwrap();
+                            let mut order = state.modules_order.lock().unwrap();
+
+                            if !modules.contains_key(&hash_hex) {
+                                modules.insert(hash_hex.clone(), m.clone());
+                                order.push_back(hash_hex.clone());
+
+                                if order.len() > 100 {
+                                    if let Some(oldest) = order.pop_front() {
+                                        modules.remove(&oldest);
+                                    }
                                 }
                             }
+                            ModuleResolveResult::Ok(m)
                         }
-                        ModuleResolveResult::Ok(m)
+                        Err(e) => ModuleResolveResult::Err(format!("Failed to compile dynamic WASM module: {}", e)),
+                    };
+
+                    if let Some(nw) = notify_waiters {
+                        nw.notify_waiters();
                     }
-                    Err(e) => ModuleResolveResult::Err(format!("Failed to compile dynamic WASM module: {}", e)),
+                    res
                 }
             }
         }
