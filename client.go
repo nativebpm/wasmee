@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"gitlab.com/nativebpm/olme"
+	"github.com/nativebpm/wasmee/olme"
 )
 
 // Bytes is a custom type that serializes/deserializes byte slices as JSON arrays of numbers.
