@@ -20,7 +20,12 @@ deploy-site-test:
   rules:
     - if: '$CI_COMMIT_BRANCH == "test"'
   script:
-    - echo "$GCP_SERVICE_KEY" > gcp-key.json
+    - |
+      if echo "$GCP_SERVICE_KEY" | grep -q '{'; then
+        echo "$GCP_SERVICE_KEY" > gcp-key.json
+      else
+        echo "$GCP_SERVICE_KEY" | base64 -d > gcp-key.json
+      fi
     - gcloud auth activate-service-account --key-file=gcp-key.json
     - gcloud config set project nativebpm
     - gcloud builds submit --gcs-source-staging-dir="gs://nativebpm-build-sources-133825711702/source" --tag us-central1-docker.pkg.dev/nativebpm/nativebpm-repo/wasmee-site-test:latest site --suppress-logs
@@ -34,7 +39,12 @@ deploy-site-main:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
   script:
-    - echo "$GCP_SERVICE_KEY" > gcp-key.json
+    - |
+      if echo "$GCP_SERVICE_KEY" | grep -q '{'; then
+        echo "$GCP_SERVICE_KEY" > gcp-key.json
+      else
+        echo "$GCP_SERVICE_KEY" | base64 -d > gcp-key.json
+      fi
     - gcloud auth activate-service-account --key-file=gcp-key.json
     - gcloud config set project nativebpm
     - gcloud builds submit --gcs-source-staging-dir="gs://nativebpm-build-sources-133825711702/source" --tag us-central1-docker.pkg.dev/nativebpm/nativebpm-repo/wasmee-site:latest site --suppress-logs
