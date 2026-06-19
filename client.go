@@ -1,3 +1,5 @@
+//go:generate protoc --proto_path=../../wasmee --go_out=pb --go_opt=paths=source_relative ../../wasmee/wasmee.proto
+
 package wasmee
 
 import (
@@ -106,7 +108,9 @@ func (r *Runner) Execute(ctx context.Context, session *Session, entrypoint strin
 		MemoryDeltas:   deltas,
 		Oplog:          oplog,
 		ExchangeBuffer: exchangeBuffer,
+		WasmBytes:      r.wasmBytes,
 	}
+
 
 	protoBytes, err := proto.Marshal(reqBody)
 	if err != nil {
