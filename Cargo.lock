@@ -1935,6 +1935,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasmee-guest"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "wasmparser"
 version = "0.209.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -1,3 +1,9 @@
+[workspace]
+members = [
+    ".",
+    "guest",
+]
+
 [package]
 name = "wasmee"
 version = "0.1.0"
