@@ -1,0 +1,41 @@
+stages:
+  - test
+  - deploy
+
+test-rust:
+  stage: test
+  tags:
+    - m5
+  image: rust:1.75-slim
+  script:
+    - cargo test --workspace
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "test"'
+
+deploy-site-test:
+  stage: deploy
+  tags:
+    - m5
+  image: google/cloud-sdk:alpine
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "test"'
+  script:
+    - echo "$GCP_SERVICE_KEY" > gcp-key.json
+    - gcloud auth activate-service-account --key-file=gcp-key.json
+    - gcloud config set project nativebpm
+    - gcloud builds submit --gcs-source-staging-dir="gs://nativebpm-build-sources-133825711702/source" --tag us-central1-docker.pkg.dev/nativebpm/nativebpm-repo/wasmee-site-test:latest site --suppress-logs
+    - gcloud run deploy wasmee-site-test --image=us-central1-docker.pkg.dev/nativebpm/nativebpm-repo/wasmee-site-test:latest --region=us-central1 --platform=managed --allow-unauthenticated --cpu=0.25 --memory=512Mi --min-instances=0 --max-instances=2 --cpu-throttling
+
+deploy-site-main:
+  stage: deploy
+  tags:
+    - m5
+  image: google/cloud-sdk:alpine
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  script:
+    - echo "$GCP_SERVICE_KEY" > gcp-key.json
+    - gcloud auth activate-service-account --key-file=gcp-key.json
+    - gcloud config set project nativebpm
+    - gcloud builds submit --gcs-source-staging-dir="gs://nativebpm-build-sources-133825711702/source" --tag us-central1-docker.pkg.dev/nativebpm/nativebpm-repo/wasmee-site:latest site --suppress-logs
+    - gcloud run deploy wasmee-site --image=us-central1-docker.pkg.dev/nativebpm/nativebpm-repo/wasmee-site:latest --region=us-central1 --platform=managed --allow-unauthenticated --cpu=0.25 --memory=512Mi --min-instances=0 --max-instances=2 --cpu-throttling
