@@ -1,6 +1,6 @@
 use std::sync::Arc;
-use std::collections::HashMap;
-use std::sync::Mutex;
+use std::collections::{HashMap, VecDeque};
+use std::sync::{Mutex, RwLock};
 use axum::{routing::post, response::IntoResponse, Router};
 use wasmtime::{Engine, Module};
 
@@ -13,8 +13,10 @@ pub mod pb {
 struct AppState {
     engine: Engine,
     default_module: Option<Module>,
-    modules: Mutex<HashMap<String, Module>>,
+    modules: RwLock<HashMap<String, Module>>,
+    modules_order: Mutex<VecDeque<String>>,
     store: engine::RustStore,
+    api_token: String,
 }
 
 #[tokio::main]
@@ -41,12 +43,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
     let store = engine::RustStore::default();
+    let api_token = std::env::var("API_TOKEN").unwrap_or_else(|_| "test-bearer-token".to_string());
 
     let state = Arc::new(AppState {
         engine,
         default_module,
-        modules: Mutex::new(HashMap::new()),
+        modules: RwLock::new(HashMap::new()),
+        modules_order: Mutex::new(VecDeque::new()),
         store,
+        api_token,
     });
 
     let app = Router::new()
@@ -65,10 +70,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn execute_handler(
     axum::extract::State(state): axum::extract::State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
     body_bytes: axum::body::Bytes,
 ) -> impl axum::response::IntoResponse {
     use prost::Message;
     use sha2::{Digest, Sha256};
+
+    // 1. Enforce Token Authentication
+    let auth_header = headers.get(axum::http::header::AUTHORIZATION);
+    let is_auth = if let Some(val) = auth_header {
+        if let Ok(val_str) = val.to_str() {
+            val_str == format!("Bearer {}", state.api_token)
+        } else {
+            false
+        }
+    } else {
+        false
+    };
+
+    if !is_auth {
+        return (
+            axum::http::StatusCode::UNAUTHORIZED,
+            [("content-type", "text/plain")],
+            b"Unauthorized: invalid or missing bearer token".to_vec(),
+        ).into_response();
+    }
 
     let payload = match pb::ExecuteRequest::decode(body_bytes) {
         Ok(req) => req,
@@ -81,27 +107,54 @@ async fn execute_handler(
         }
     };
 
+    // 2. Enforce Max Payload Limit (15MB)
+    if payload.wasm_bytes.len() > 15 * 1024 * 1024 {
+        return (
+            axum::http::StatusCode::BAD_REQUEST,
+            [("content-type", "text/plain")],
+            b"Payload size exceeds 15MB limit".to_vec(),
+        ).into_response();
+    }
+
     let engine = state.engine.clone();
     let wasm_store = state.store.clone();
     let initial_call_index = 0;
 
+    // 3. Thread Separation & JIT Cache Eviction
     let module_res = if !payload.wasm_bytes.is_empty() {
         let mut hasher = Sha256::new();
         hasher.update(&payload.wasm_bytes);
         let hash_hex = format!("{:x}", hasher.finalize());
 
         let cached_module = {
-            let modules = state.modules.lock().unwrap();
+            let modules = state.modules.read().unwrap();
             modules.get(&hash_hex).cloned()
         };
 
         match cached_module {
             Some(m) => Ok(m),
             None => {
-                match Module::new(&engine, &payload.wasm_bytes) {
+                let engine_clone = engine.clone();
+                let wasm_bytes_clone = payload.wasm_bytes.clone();
+                let compile_res = tokio::task::spawn_blocking(move || {
+                    Module::new(&engine_clone, &wasm_bytes_clone)
+                }).await.unwrap();
+
+                match compile_res {
                     Ok(m) => {
-                        let mut modules = state.modules.lock().unwrap();
-                        modules.insert(hash_hex, m.clone());
+                        let mut modules = state.modules.write().unwrap();
+                        let mut order = state.modules_order.lock().unwrap();
+
+                        if !modules.contains_key(&hash_hex) {
+                            modules.insert(hash_hex.clone(), m.clone());
+                            order.push_back(hash_hex.clone());
+
+                            if order.len() > 100 {
+                                if let Some(oldest) = order.pop_front() {
+                                    modules.remove(&oldest);
+                                }
+                            }
+                        }
                         Ok(m)
                     }
                     Err(e) => Err(format!("Failed to compile dynamic WASM module: {}", e)),

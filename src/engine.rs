@@ -124,8 +124,21 @@ pub fn run_wasm(
     store: RustStore,
     exchange_buffer: &[u8],
 ) -> RunResult {
-    let engine = Engine::default();
+    let mut config = wasmtime::Config::new();
+    config.consume_fuel(true);
+    let engine = match Engine::new(&config) {
+        Ok(e) => e,
+        Err(e) => return RunResult {
+            final_oplog: vec![],
+            final_deltas: HashMap::new(),
+            checkpoints: vec![],
+            crashed: true,
+            error: format!("Failed to create engine: {}", e),
+            response_bytes: vec![],
+        },
+    };
     let module = match Module::new(&engine, wasm_bytes) {
+
         Ok(m) => m,
         Err(e) => return RunResult {
             final_oplog: vec![],
@@ -321,13 +334,6 @@ pub fn run_wasm_precompiled(
 
         // Live host call
         let response = match api_name.as_str() {
-            "execute_service_task" => {
-                serde_json::to_vec(&serde_json::json!({
-                    "status": "success",
-                    "payment_status": "success",
-                    "transaction_id": "TXN-987654321"
-                })).unwrap()
-            }
             "test_api" => {
                 format!("resp_for_{}_call_{}", String::from_utf8_lossy(&request), call_idx).into_bytes()
             }
@@ -378,6 +384,8 @@ pub fn run_wasm_precompiled(
             checkpoints: vec![],
         },
     );
+    let _ = store_obj.set_fuel(10_000_000);
+
 
     // Instantiate module
     let instance = match linker.instantiate(&mut store_obj, module) {
