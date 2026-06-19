@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Wasmee — The Durable WebAssembly Engine</title>
-  <meta name="description" content="Wasmee is a high-performance, sandboxed WebAssembly runtime built in Rust on top of Wasmtime. Engineered for microservices, edge computing, and durable workflow executions.">
+  <meta name="description" content="Wasmee is a high-performance, sandboxed WebAssembly runtime built in Rust on top of Wasmtime. Engineered for microservices, edge computing, and durable stateful executions.">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -57,7 +57,7 @@
       </h1>
       
       <p class="hero-subtitle">
-        Wasmee is a sandboxed WebAssembly execution engine written in Rust on top of Wasmtime. Engineered for high-density, crash-resilient workflows, providing microsecond startup times and native state checkpointing.
+        Wasmee is a sandboxed WebAssembly execution engine written in Rust on top of Wasmtime. Engineered for high-density, crash-resilient executions, providing microsecond startup times and native state checkpointing.
       </p>
 
       <div class="hero-ctas">
@@ -104,7 +104,7 @@
           <div class="terminal-content" id="tab-snapshot">
             <div class="line"><span class="prompt">$</span> wasmee snapshot create guest_process.wasm --out snapshot.bin</div>
             <div class="line"><span class="info">[info]</span> Running process step 1 of 5...</div>
-            <div class="line warning"><span class="warn">[warn]</span> Snapshot triggered at workflow execution checkpoint (Step 2).</div>
+            <div class="line warning"><span class="warn">[warn]</span> Snapshot triggered at guest execution checkpoint (Step 2).</div>
             <div class="line"><span class="info">[info]</span> Serializing VM instance memory layout (14 pages)...</div>
             <div class="line success"><span class="info">[success]</span> Snapshot binary written to database (280 KB). VM state saved.</div>
             <div class="line"><span class="prompt">$</span> wasmee snapshot resume snapshot.bin</div>
@@ -142,7 +142,7 @@
         <div class="metric-card">
           <div class="metric-value">12.6k+</div>
           <div class="metric-label">In-Memory RPS</div>
-          <div class="metric-desc">Blazing throughput executing BPMN script tasks on a single node.</div>
+          <div class="metric-desc">Blazing throughput executing sandboxed WebAssembly tasks on a single node.</div>
         </div>
         <div class="metric-card">
           <div class="metric-value">100%</div>
@@ -211,13 +211,11 @@
         <div class="feature-card">
           <div class="feature-icon-wrapper pink">
             <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-              <path d="M2 17l10 5 10-5"></path>
-              <path d="M2 12l10 5 10-5"></path>
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
             </svg>
           </div>
-          <h3 class="feature-title">Dual-Runtime Strategy</h3>
-          <p class="feature-desc">Fallback dynamically between Wazero JIT (pure Go, CGO-free, zero configurations) and Wasmee (Rust, high-performance JIT execution).</p>
+          <h3 class="feature-title">Gas-Metered Execution</h3>
+          <p class="feature-desc">Prevent resource exhaustion and infinite loops by defining strict execution limits (gas budgets) for untrusted guest tasks.</p>
         </div>
 
         <div class="feature-card">
@@ -229,7 +227,7 @@
             </svg>
           </div>
           <h3 class="feature-title">Seamless Variable Exchange</h3>
-          <p class="feature-desc">Bidirectional serialization mappings. Read/write process context variables using simple import functions directly from guest Wasm.</p>
+          <p class="feature-desc">Bidirectional serialization mappings. Read/write execution context variables using simple import functions directly from guest Wasm.</p>
         </div>
       </div>
     </div>
@@ -240,7 +238,7 @@
     <div class="container">
       <div class="section-header">
         <h2 class="section-title">Write Once. Run and Persist Anywhere.</h2>
-        <p class="section-subtitle">How guest scripts leverage Wasmee host bindings for state-resilient operations.</p>
+        <p class="section-subtitle">How guest scripts leverage Wasmee host bindings for state-resilient executions.</p>
       </div>
 
       <div class="code-playground">
@@ -260,7 +258,7 @@
 pub extern "C" fn execute() -> i32 {
     wasmee_sdk::log(LogLevel::Info, "Starting order calculation...");
 
-    // Retrieve process variable from host
+    // Retrieve environment variable from host
     let total: f64 = get_variable("order_total").unwrap_or(0.0);
     
     if total &lt;= 0.0 {
@@ -270,7 +268,7 @@ pub extern "C" fn execute() -> i32 {
 
     let tax = total * 0.15;
     
-    // Save variable back to process context
+    // Save variable back to execution context
     set_variable("calculated_tax", tax);
     
     wasmee_sdk::log(LogLevel::Info, "Tax calculated successfully.");
@@ -295,7 +293,7 @@ function execute(vars) {
             <pre class="code-block" id="code-go"><code class="language-go">package main
 
 import (
-	"github.com/nativebpm/sdk/go/guest"
+	"github.com/wasmee/sdk/go/guest"
 )
 
 //export execute
@@ -311,7 +309,7 @@ func execute() int32 {
 	
 	tax := total * 0.15
 	
-	// Save variable back to process variables
+	// Save variable back to context variables
 	guest.SetVariableFloat("calculated_tax", tax)
 	return 0
 }
@@ -325,7 +323,7 @@ func main() {}</code></pre>
             <span class="output-title">Execution Console</span>
           </div>
           <div class="output-body">
-            <div class="output-line"><span class="out-time">[14:24:00]</span> <span class="out-tag info">INFO</span> Loading process variable 'order_total'...</div>
+            <div class="output-line"><span class="out-time">[14:24:00]</span> <span class="out-tag info">INFO</span> Loading environment variable 'order_total'...</div>
             <div class="output-line"><span class="out-time">[14:24:00]</span> <span class="out-tag value">VALU</span> order_total = 4500.00</div>
             <div class="output-line"><span class="out-time">[14:24:00]</span> <span class="out-tag info">INFO</span> Running calculations...</div>
             <div class="output-line highlight-line"><span class="out-time">[14:24:00]</span> <span class="out-tag snap">SNAP</span> Auto-checkpoint: serializing execution memory state...</div>
@@ -341,8 +339,8 @@ func main() {}</code></pre>
   <!-- CTA Section -->
   <section class="cta-section" id="get-started">
     <div class="cta-container">
-      <h2 class="cta-title">Build High-Density Durable Workflows</h2>
-      <p class="cta-subtitle">Run untrusted user logic, scale microservices, or orchestrate complex workflows at the speed of native code.</p>
+      <h2 class="cta-title">Build High-Density Durable Executions</h2>
+      <p class="cta-subtitle">Run untrusted user logic, scale microservices, or orchestrate complex execution pipelines at the speed of native code.</p>
       <div class="cta-buttons">
         <a href="https://github.com/nativebpm/wasmee" class="btn btn-primary btn-lg" target="_blank">View on GitHub</a>
         <a href="#code" class="btn btn-secondary btn-lg">View SDK Guides</a>
