@@ -96,13 +96,16 @@ pub extern "C" fn resume(
         Err(_) => return -3,
     };
 
-    // Read completed task ID from raw WASM memory address
-    let task_id_bytes = unsafe {
-        std::slice::from_raw_parts(completed_task_id_ptr as *const u8, completed_task_id_len as usize)
-    };
+    // Read completed task ID from EXCHANGE_BUFFER at relative offset
+    let start_idx = completed_task_id_ptr as usize;
+    let end_idx = start_idx + completed_task_id_len as usize;
+    if end_idx > MAX_BUFFER_SIZE {
+        return -6;
+    }
+    let task_id_bytes = unsafe { &EXCHANGE_BUFFER[start_idx..end_idx] };
     let completed_task_id = match std::str::from_utf8(task_id_bytes) {
         Ok(s) => s,
-        Err(_) => return -6,
+        Err(_) => return -7,
     };
 
     // Remove from waiting list

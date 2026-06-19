@@ -293,6 +293,11 @@ pub fn run(graph: &GraphDefinition, instance: &mut ProcessInstance) {
                 };
 
                 if res >= 0 {
+                    if let Ok(updated_vars) = serde_json::from_slice::<std::collections::HashMap<String, serde_json::Value>>(&resp_buf[..res as usize]) {
+                        for (k, v) in updated_vars {
+                            instance.variables.insert(k, v);
+                        }
+                    }
                     transition_outbound(graph, instance, &current_node_id);
                 } else {
                     instance.waiting_activity_instances.push(current_node_id.clone());

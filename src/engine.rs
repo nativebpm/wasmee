@@ -423,9 +423,18 @@ pub fn run_wasm_precompiled(
         },
     };
 
+    let func_type = func.ty(&store_obj);
+    let expected_types: Vec<wasmtime::ValType> = func_type.params().collect();
     let wasmtime_params: Vec<wasmtime::Val> = params
         .iter()
-        .map(|&p| wasmtime::Val::I64(p as i64))
+        .enumerate()
+        .map(|(i, &p)| {
+            match expected_types.get(i) {
+                Some(wasmtime::ValType::I32) => wasmtime::Val::I32(p as i32),
+                Some(wasmtime::ValType::I64) => wasmtime::Val::I64(p as i64),
+                _ => wasmtime::Val::I64(p as i64),
+            }
+        })
         .collect();
     let mut wasmtime_results = vec![wasmtime::Val::I32(0)];
 
