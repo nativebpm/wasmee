@@ -20,6 +20,7 @@ message ExecuteRequest {
   repeated OplogEntry oplog = 6;
   bytes exchange_buffer = 7;
   bytes wasm_bytes = 8;
+  string wasm_hash = 9;
 }
 
 
@@ -35,4 +36,5 @@ message ExecuteResponse {
   repeated OplogEntry final_oplog = 4;
   repeated CheckpointData checkpoints = 5;
   bytes response_bytes = 6;
+  bool module_not_found = 7;
 }

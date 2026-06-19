@@ -123,6 +123,12 @@ async fn execute_handler(
     let initial_call_index = 0;
 
     // 3. Thread Separation & JIT Cache Eviction
+    enum ModuleResolveResult {
+        Ok(Module),
+        NotFoundInCache,
+        Err(String),
+    }
+
     let module_res = if !payload.wasm_bytes.is_empty() {
         let mut hasher = Sha256::new();
         hasher.update(&payload.wasm_bytes);
@@ -134,7 +140,7 @@ async fn execute_handler(
         };
 
         match cached_module {
-            Some(m) => Ok(m),
+            Some(m) => ModuleResolveResult::Ok(m),
             None => {
                 let engine_clone = engine.clone();
                 let wasm_bytes_clone = payload.wasm_bytes.clone();
@@ -157,22 +163,49 @@ async fn execute_handler(
                                 }
                             }
                         }
-                        Ok(m)
+                        ModuleResolveResult::Ok(m)
                     }
-                    Err(e) => Err(format!("Failed to compile dynamic WASM module: {}", e)),
+                    Err(e) => ModuleResolveResult::Err(format!("Failed to compile dynamic WASM module: {}", e)),
                 }
             }
         }
+    } else if !payload.wasm_hash.is_empty() {
+        let cached_module = {
+            let modules = state.modules.read().unwrap();
+            modules.get(&payload.wasm_hash).cloned()
+        };
+        match cached_module {
+            Some(m) => ModuleResolveResult::Ok(m),
+            None => ModuleResolveResult::NotFoundInCache,
+        }
     } else {
         match &state.default_module {
-            Some(m) => Ok(m.clone()),
-            None => Err("No WASM module provided in request and no default guest module loaded on host".to_string()),
+            Some(m) => ModuleResolveResult::Ok(m.clone()),
+            None => ModuleResolveResult::Err("No WASM module or hash provided in request and no default guest module loaded on host".to_string()),
         }
     };
 
     let module = match module_res {
-        Ok(m) => m,
-        Err(err_msg) => {
+        ModuleResolveResult::Ok(m) => m,
+        ModuleResolveResult::NotFoundInCache => {
+            let resp = pb::ExecuteResponse {
+                crashed: true,
+                error: "Module not found in cache".to_string(),
+                final_deltas: HashMap::new(),
+                final_oplog: vec![],
+                checkpoints: vec![],
+                response_bytes: vec![],
+                module_not_found: true,
+            };
+            let mut buf = Vec::new();
+            let _ = resp.encode(&mut buf);
+            return (
+                axum::http::StatusCode::OK,
+                [("content-type", "application/x-protobuf")],
+                buf,
+            ).into_response();
+        }
+        ModuleResolveResult::Err(err_msg) => {
             let resp = pb::ExecuteResponse {
                 crashed: true,
                 error: err_msg,
@@ -180,6 +213,7 @@ async fn execute_handler(
                 final_oplog: vec![],
                 checkpoints: vec![],
                 response_bytes: vec![],
+                module_not_found: false,
             };
             let mut buf = Vec::new();
             let _ = resp.encode(&mut buf);
@@ -214,6 +248,7 @@ async fn execute_handler(
         final_oplog: res.final_oplog,
         checkpoints: res.checkpoints,
         response_bytes: res.response_bytes,
+        module_not_found: false,
     };
 
     let mut buf = Vec::new();
