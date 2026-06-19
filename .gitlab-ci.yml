@@ -8,6 +8,7 @@ test-rust:
     - m5
   image: rust:1.96-slim
   script:
+    - apt-get update && apt-get install -y protobuf-compiler
     - cargo test --workspace
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "test"'
