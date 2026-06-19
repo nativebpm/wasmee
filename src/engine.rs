@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use wasmtime::{Caller, Engine, Linker, Module, Store};
+use crate::pb::{OplogEntry, CheckpointData};
+
 
 pub const PAGE_SIZE: usize = 65536;
 
@@ -82,15 +84,6 @@ pub fn restore_memory(base: &[u8], deltas: &HashMap<i32, Vec<u8>>) -> Vec<u8> {
     restored
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub struct OplogEntry {
-    pub call_index: i32,
-    pub api_name: String,
-    #[serde(with = "base64_serde")]
-    pub request_payload: Vec<u8>,
-    #[serde(with = "base64_serde")]
-    pub response_payload: Vec<u8>,
-}
 
 #[derive(Default, Clone)]
 pub struct RustStore {
@@ -100,12 +93,6 @@ pub struct RustStore {
     pub metadata: std::sync::Arc<std::sync::Mutex<HashMap<String, i32>>>, // instance_id -> version
 }
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
-pub struct CheckpointData {
-    #[serde(with = "base64_serde")]
-    pub memory: Vec<u8>,
-    pub oplog_len: usize,
-}
 
 pub struct VMState {
     pub instance_id: String,
@@ -216,7 +203,7 @@ pub fn run_wasm_precompiled(
         let oplog_len = state.oplog.len();
         state.checkpoints.push(CheckpointData {
             memory: data.clone(),
-            oplog_len,
+            oplog_len: oplog_len as i32,
         });
 
         let instance_id = state.instance_id.clone();

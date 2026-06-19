@@ -1,73 +1,17 @@
-use std::collections::HashMap;
 use std::sync::Arc;
-use axum::{routing::post, Json, Router};
+use axum::{routing::post, response::IntoResponse, Router};
 use wasmtime::{Engine, Module};
 
 pub mod engine;
+
+pub mod pb {
+    include!(concat!(env!("OUT_DIR"), "/wasmee.rs"));
+}
 
 struct AppState {
     engine: Engine,
     module: Module,
     store: engine::RustStore,
-}
-
-#[derive(serde::Deserialize)]
-struct ExecuteRequest {
-    instance_id: String,
-    entrypoint: String,
-    params: Vec<u64>,
-    #[serde(with = "engine::base64_serde")]
-    base_snapshot: Vec<u8>,
-    #[serde(deserialize_with = "deserialize_memory_deltas")]
-    memory_deltas: HashMap<i32, Vec<u8>>,
-    oplog: Vec<engine::OplogEntry>,
-    #[serde(default, with = "engine::base64_serde")]
-    exchange_buffer: Vec<u8>,
-}
-
-fn deserialize_memory_deltas<'de, D>(deserializer: D) -> Result<HashMap<i32, Vec<u8>>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    use serde::Deserialize;
-    #[derive(serde::Deserialize)]
-    struct Wrapper(#[serde(with = "engine::base64_serde")] Vec<u8>);
-
-    let map = HashMap::<String, Wrapper>::deserialize(deserializer)?;
-    let mut result = HashMap::new();
-    for (k, v) in map {
-        if let Ok(key) = k.parse::<i32>() {
-            result.insert(key, v.0);
-        }
-    }
-    Ok(result)
-}
-
-#[derive(serde::Serialize)]
-struct ExecuteResponse {
-    crashed: bool,
-    error: String,
-    #[serde(serialize_with = "serialize_memory_deltas")]
-    final_deltas: HashMap<i32, Vec<u8>>,
-    final_oplog: Vec<engine::OplogEntry>,
-    checkpoints: Vec<engine::CheckpointData>,
-    #[serde(with = "engine::base64_serde")]
-    response_bytes: Vec<u8>,
-}
-
-fn serialize_memory_deltas<S>(map: &HashMap<i32, Vec<u8>>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    use serde::ser::SerializeMap;
-    #[derive(serde::Serialize)]
-    struct Wrapper<'a>(#[serde(with = "engine::base64_serde")] &'a [u8]);
-
-    let mut map_ser = serializer.serialize_map(Some(map.len()))?;
-    for (k, v) in map {
-        map_ser.serialize_entry(&k.to_string(), &Wrapper(v))?;
-    }
-    map_ser.end()
 }
 
 #[tokio::main]
@@ -105,8 +49,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn execute_handler(
     axum::extract::State(state): axum::extract::State<Arc<AppState>>,
-    Json(payload): Json<ExecuteRequest>,
-) -> Json<ExecuteResponse> {
+    body_bytes: axum::body::Bytes,
+) -> impl axum::response::IntoResponse {
+    use prost::Message;
+
+    let payload = match pb::ExecuteRequest::decode(body_bytes) {
+        Ok(req) => req,
+        Err(e) => {
+            return (
+                axum::http::StatusCode::BAD_REQUEST,
+                [("content-type", "text/plain")],
+                format!("Failed to decode protobuf request: {}", e).into_bytes(),
+            ).into_response();
+        }
+    };
+
     let engine = state.engine.clone();
     let module = state.module.clone();
     let wasm_store = state.store.clone();
@@ -128,12 +85,28 @@ async fn execute_handler(
         )
     }).await.unwrap();
 
-    Json(ExecuteResponse {
+    let resp = pb::ExecuteResponse {
         crashed: res.crashed,
         error: res.error,
         final_deltas: res.final_deltas,
         final_oplog: res.final_oplog,
         checkpoints: res.checkpoints,
         response_bytes: res.response_bytes,
-    })
+    };
+
+    let mut buf = Vec::new();
+    if let Err(e) = resp.encode(&mut buf) {
+        return (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            [("content-type", "text/plain")],
+            format!("Failed to encode protobuf response: {}", e).into_bytes(),
+        ).into_response();
+    }
+
+    (
+        axum::http::StatusCode::OK,
+        [("content-type", "application/x-protobuf")],
+        buf,
+    ).into_response()
 }
+
