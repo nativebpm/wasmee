@@ -869,6 +869,27 @@ p {
   }
 }
 
+@media (max-width: 480px) {
+  .nav-container {
+    padding: 0.8rem 1rem;
+  }
+  .logo-text {
+    font-size: 1.15rem;
+  }
+  .lang-switcher {
+    margin-right: 0.5rem;
+    padding: 0.15rem 0.3rem;
+  }
+  .lang-switch-btn {
+    font-size: 0.75rem;
+    padding: 0.1rem 0.3rem;
+  }
+  .btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+}
+
 /* Fiddle Form Styles */
 #code-fiddle {
   padding: 1.5rem;

@@ -562,8 +562,25 @@ const navBlog = document.getElementById('nav-blog');
 
 let currentLang: 'en' | 'ru' = 'en';
 
+function getPreferredLanguage(): 'en' | 'ru' {
+  const saved = localStorage.getItem('wasmee_lang');
+  if (saved === 'en' || saved === 'ru') {
+    return saved;
+  }
+  
+  const browserLang = navigator.language || (navigator as any).userLanguage || '';
+  if (browserLang.toLowerCase().startsWith('ru') || 
+      browserLang.toLowerCase().startsWith('be') || 
+      browserLang.toLowerCase().startsWith('uk') || 
+      browserLang.toLowerCase().startsWith('kk')) {
+    return 'ru';
+  }
+  return 'en';
+}
+
 function setLanguage(lang: 'en' | 'ru') {
   currentLang = lang;
+  localStorage.setItem('wasmee_lang', lang);
   
   // Update language switcher buttons UI
   document.querySelectorAll('[data-switch-lang]').forEach(btn => {
@@ -597,7 +614,8 @@ function setLanguage(lang: 'en' | 'ru') {
 }
 
 function router() {
-  const hash = window.location.hash || '#en/home';
+  const preferredLang = getPreferredLanguage();
+  const hash = window.location.hash || `#${preferredLang}/home`;
   
   let lang: 'en' | 'ru' = 'en';
   let path = 'home';
