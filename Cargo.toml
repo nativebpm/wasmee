@@ -23,7 +23,7 @@ reqwest = { version = "0.11", default-features = false, features = ["rustls-tls"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 flate2 = "1.0"
 brotli = "6.0"
-tower-http = { version = "0.5.0", features = ["cors"] }
+tower-http = { version = "0.5.0", features = ["cors", "compression-gzip", "compression-br", "decompression-gzip", "decompression-br"] }
 
 [build-dependencies]
 prost-build = "0.12"

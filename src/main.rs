@@ -4,6 +4,8 @@ use std::sync::{Mutex, RwLock};
 use axum::{routing::post, response::IntoResponse, Router};
 use wasmtime::{Engine, Module};
 use tower_http::cors::{CorsLayer, Any};
+use tower_http::compression::CompressionLayer;
+use tower_http::decompression::RequestDecompressionLayer;
 
 pub mod engine;
 pub mod git_resolver;
@@ -164,6 +166,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/gitops/sync", post(warmup_handler))
         .route("/git-webhook", post(git_webhook_handler))
         .layer(cors)
+        .layer(CompressionLayer::new())
+        .layer(RequestDecompressionLayer::new())
         .layer(axum::extract::DefaultBodyLimit::max(20 * 1024 * 1024))
         .with_state(state);
 
