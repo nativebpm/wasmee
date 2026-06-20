@@ -31,3 +31,24 @@ dist/assets/index-TrYzYv99.css  16.36 kB │ gzip:  3.71 kB
 dist/assets/index-DyJbQme-.js   29.44 kB │ gzip: 10.59 kB
 ✓ built in 104ms
 ```
+
+### Go Test Verification & Protobuf Fixes
+During synchronization with the `test` branch, we identified and fixed test panics caused by outdated protobuf bindings (`pb/wasmee.pb.go`) missing 4 message types.
+- Fixed the `go_package` option in [wasmee.proto](file:///Users/user/gitlab.com/wasmee/wasmee/wasmee.proto) to map to the standalone repository package `github.com/nativebpm/wasmee/pb`.
+- Regenerated the protobuf bindings using `protoc`.
+- Updated test paths in [wasmee_test.go](file:///Users/user/gitlab.com/wasmee/wasmee/wasmee_test.go) from `../../wasmee/` to correct relative paths (`./target/debug/wasmee` and `./guest/target/wasm32-wasip1/release/wasmee_guest.wasm`).
+- Ran and verified both Go tests and Rust Cargo tests pass successfully:
+```bash
+$ go test -v ./...
+=== RUN   TestWasmRunnerExecution
+--- PASS: TestWasmRunnerExecution (0.04s)
+=== RUN   TestWasmRunnerSimulatedCrashRecovery
+--- PASS: TestWasmRunnerSimulatedCrashRecovery (0.04s)
+=== RUN   TestDynamicWasmModuleExecution
+--- PASS: TestDynamicWasmModuleExecution (0.04s)
+=== RUN   TestFluentRunnerExecution
+--- PASS: TestFluentRunnerExecution (0.02s)
+PASS
+ok  	github.com/nativebpm/wasmee	0.582s
+```
+
