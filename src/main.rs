@@ -18,7 +18,6 @@ struct AppState {
     modules: RwLock<HashMap<String, Module>>,
     modules_order: Mutex<VecDeque<String>>,
     compiling: Mutex<HashMap<String, Arc<tokio::sync::Notify>>>,
-    store: engine::RustStore,
     api_token: String,
 }
 
@@ -124,7 +123,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             None
         }
     };
-    let store = engine::RustStore::default();
     let api_token = std::env::var("API_TOKEN").unwrap_or_else(|_| "test-bearer-token".to_string());
 
     let state = Arc::new(AppState {
@@ -133,7 +131,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         modules: RwLock::new(HashMap::new()),
         modules_order: Mutex::new(VecDeque::new()),
         compiling: Mutex::new(HashMap::new()),
-        store,
         api_token,
     });
 
@@ -225,7 +222,6 @@ async fn execute_handler(
     }
 
     let engine = state.engine.clone();
-    let wasm_store = state.store.clone();
     let initial_call_index = 0;
 
     // 3. Thread Separation & JIT Cache Eviction
@@ -334,7 +330,6 @@ async fn execute_handler(
             &payload.memory_deltas,
             payload.oplog,
             initial_call_index,
-            wasm_store,
             &payload.exchange_buffer,
             payload.sandbox_config.as_ref(),
         )

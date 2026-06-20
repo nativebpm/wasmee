@@ -85,21 +85,11 @@ pub fn restore_memory(base: &[u8], deltas: &HashMap<i32, Vec<u8>>) -> Vec<u8> {
 }
 
 
-#[derive(Default, Clone)]
-pub struct RustStore {
-    pub snapshots: std::sync::Arc<std::sync::Mutex<HashMap<String, Vec<u8>>>>,
-    pub deltas: std::sync::Arc<std::sync::Mutex<HashMap<String, HashMap<i32, Vec<u8>>>>>,
-    pub oplogs: std::sync::Arc<std::sync::Mutex<HashMap<String, Vec<OplogEntry>>>>,
-    pub metadata: std::sync::Arc<std::sync::Mutex<HashMap<String, i32>>>, // instance_id -> version
-}
-
-
 pub struct VMState {
     pub instance_id: String,
     pub call_index: i32,
     pub oplog: Vec<OplogEntry>,
     pub page_hashes: HashMap<i32, u64>,
-    pub store: RustStore,
     pub checkpoints: Vec<CheckpointData>,
     pub limits: wasmtime::StoreLimits,
 }
@@ -122,7 +112,6 @@ pub fn run_wasm(
     memory_deltas: &HashMap<i32, Vec<u8>>,
     initial_oplog: Vec<OplogEntry>,
     initial_call_index: i32,
-    store: RustStore,
     exchange_buffer: &[u8],
 ) -> RunResult {
     let mut config = wasmtime::Config::new();
@@ -160,7 +149,6 @@ pub fn run_wasm(
         memory_deltas,
         initial_oplog,
         initial_call_index,
-        store,
         exchange_buffer,
         None,
     )
@@ -176,7 +164,6 @@ pub fn run_wasm_precompiled(
     memory_deltas: &HashMap<i32, Vec<u8>>,
     initial_oplog: Vec<OplogEntry>,
     initial_call_index: i32,
-    store: RustStore,
     exchange_buffer: &[u8],
     sandbox_config: Option<&crate::pb::SandboxConfig>,
 ) -> RunResult {
@@ -214,7 +201,7 @@ pub fn run_wasm_precompiled(
 
         let data = mem.data(&caller).to_vec();
 
-        // 1. Save full snapshot in intermediate checkpoints list
+        // Save full snapshot in intermediate checkpoints list
         let state = caller.data_mut();
         let oplog_len = state.oplog.len();
         state.checkpoints.push(CheckpointData {
@@ -222,31 +209,8 @@ pub fn run_wasm_precompiled(
             oplog_len: oplog_len as i32,
         });
 
-        let instance_id = state.instance_id.clone();
-        let local_store = state.store.clone();
-
-        // 2. Save full snapshot in local store
-        {
-            let mut snapshots = local_store.snapshots.lock().unwrap();
-            snapshots.insert(instance_id.clone(), data.clone());
-        }
-
-        // Increment version in metadata
-        {
-            let mut metadata = local_store.metadata.lock().unwrap();
-            let ver = metadata.entry(instance_id.clone()).or_insert(0);
-            *ver += 1;
-        }
-
-        // 3. Calculate and save page hashes/deltas
-        let (deltas, new_hashes) = calculate_deltas(&data, &state.page_hashes);
-        if !deltas.is_empty() {
-            let mut store_deltas = local_store.deltas.lock().unwrap();
-            let instance_deltas = store_deltas.entry(instance_id).or_insert_with(HashMap::new);
-            for (k, v) in deltas {
-                instance_deltas.insert(k, v);
-            }
-        }
+        // Calculate and update page hashes
+        let (_, new_hashes) = calculate_deltas(&data, &state.page_hashes);
         state.page_hashes = new_hashes;
     }).unwrap();
 
@@ -278,13 +242,6 @@ pub fn run_wasm_precompiled(
 
         let state = caller.data_mut();
         state.oplog.push(entry.clone());
-
-        let instance_id = state.instance_id.clone();
-        let local_store = state.store.clone();
-        {
-            let mut oplogs = local_store.oplogs.lock().unwrap();
-            oplogs.entry(instance_id).or_insert_with(Vec::new).push(entry);
-        }
 
         now
     }).unwrap();
@@ -362,13 +319,6 @@ pub fn run_wasm_precompiled(
         let state = caller.data_mut();
         state.oplog.push(entry.clone());
 
-        let instance_id = state.instance_id.clone();
-        let local_store = state.store.clone();
-        {
-            let mut oplogs = local_store.oplogs.lock().unwrap();
-            oplogs.entry(instance_id).or_insert_with(Vec::new).push(entry);
-        }
-
         state.oplog.last().unwrap().response_payload.len() as i32
     }).unwrap();
 
@@ -396,7 +346,6 @@ pub fn run_wasm_precompiled(
             call_index: initial_call_index,
             oplog: initial_oplog,
             page_hashes: initial_page_hashes,
-            store,
             checkpoints: vec![],
             limits,
         },

@@ -1,6 +1,6 @@
 ---
 task: WASMEE-102
-status: In Progress
+status: Done
 summary: Refactoring Wasmee to a stateless runtime by removing the global RustStore persistence layer.
 ---
 
