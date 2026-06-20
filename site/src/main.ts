@@ -1,3 +1,5 @@
+import { translations } from './translations';
+
 // Copy to Clipboard Functionality
 const copyBtn = document.getElementById('copy-install-btn');
 const installCmd = document.getElementById('install-cmd');
@@ -558,26 +560,91 @@ const blogPostView = document.getElementById('blog-post-view');
 const blogPostsList = document.getElementById('blog-posts-list');
 const navBlog = document.getElementById('nav-blog');
 
+let currentLang: 'en' | 'ru' = 'en';
+
+function setLanguage(lang: 'en' | 'ru') {
+  currentLang = lang;
+  
+  // Update language switcher buttons UI
+  document.querySelectorAll('[data-switch-lang]').forEach(btn => {
+    if (btn.getAttribute('data-switch-lang') === lang) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+  
+  // Translate all data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (key && translations[key]) {
+      const translation = translations[key][lang];
+      if (translation.includes('<span')) {
+        el.innerHTML = translation;
+      } else {
+        el.textContent = translation;
+      }
+    }
+  });
+
+  // Translate all data-i18n-placeholder elements
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (key && translations[key]) {
+      (el as HTMLInputElement).placeholder = translations[key][lang];
+    }
+  });
+}
+
 function router() {
-  const hash = window.location.hash || '#home';
+  const hash = window.location.hash || '#en/home';
+  
+  let lang: 'en' | 'ru' = 'en';
+  let path = 'home';
+  
+  const match = hash.match(/^#(en|ru)(?:\/(.*))?$/);
+  if (match) {
+    lang = match[1] as 'en' | 'ru';
+    path = match[2] || 'home';
+    currentLang = lang;
+  } else {
+    // Legacy or non-prefixed hashes: redirect to prefixed hash
+    const cleanHash = hash.replace(/^#/, '');
+    if (cleanHash === 'en' || cleanHash === 'ru') {
+      lang = cleanHash as 'en' | 'ru';
+      path = 'home';
+      currentLang = lang;
+      window.location.hash = `#${lang}/${path}`;
+      return;
+    } else {
+      lang = currentLang;
+      path = cleanHash || 'home';
+      window.location.hash = `#${lang}/${path}`;
+      return;
+    }
+  }
+  
+  // Apply translation
+  setLanguage(lang);
   
   // Update nav item active states
   document.querySelectorAll('.nav-menu .nav-item').forEach(link => {
     link.classList.remove('active');
   });
   
-  if (hash === '#home' || hash.startsWith('#features') || hash.startsWith('#benchmarks') || hash.startsWith('#code') || hash.startsWith('#get-started')) {
+  if (path === 'home' || path.startsWith('features') || path.startsWith('benchmarks') || path.startsWith('code') || path.startsWith('get-started')) {
     if (homeView) homeView.style.display = 'block';
     if (blogView) blogView.style.display = 'none';
     
-    // Auto scroll to elements if hash contains anchor
-    if (hash.startsWith('#') && hash !== '#home') {
-      const targetEl = document.querySelector(hash);
+    // Auto scroll to elements if path matches section ID
+    if (path !== 'home') {
+      // Find element by id
+      const targetEl = document.getElementById(path);
       if (targetEl) {
         targetEl.scrollIntoView({ behavior: 'smooth' });
       }
     }
-  } else if (hash === '#blog') {
+  } else if (path === 'blog') {
     if (homeView) homeView.style.display = 'none';
     if (blogView) {
       blogView.style.display = 'block';
@@ -588,8 +655,8 @@ function router() {
     
     renderBlogFeed();
     window.scrollTo({ top: 0, behavior: 'instant' as any });
-  } else if (hash.startsWith('#blog/')) {
-    const slug = hash.replace('#blog/', '');
+  } else if (path.startsWith('blog/')) {
+    const slug = path.replace('blog/', '');
     const post = blogPosts.find(p => p.slug === slug);
     if (post) {
       if (homeView) homeView.style.display = 'none';
@@ -612,7 +679,7 @@ function router() {
       
       window.scrollTo({ top: 0, behavior: 'instant' as any });
     } else {
-      window.location.hash = '#blog';
+      window.location.hash = `#${lang}/blog`;
     }
   }
 }
@@ -621,7 +688,16 @@ function renderBlogFeed() {
   if (!blogPostsList) return;
   blogPostsList.innerHTML = '';
   
-  blogPosts.forEach(post => {
+  // Filter blog posts by active language
+  const filteredPosts = blogPosts.filter(post => {
+    if (currentLang === 'ru') {
+      return post.slug.endsWith('-ru');
+    } else {
+      return post.slug.endsWith('-en');
+    }
+  });
+  
+  filteredPosts.forEach(post => {
     const card = document.createElement('div');
     card.className = 'blog-card';
     card.innerHTML = `
@@ -633,7 +709,7 @@ function renderBlogFeed() {
       <div class="blog-card-footer">
         <span>${post.date}</span>
         <span class="blog-card-more">
-          Читать статью
+          ${currentLang === 'ru' ? 'Читать статью' : 'Read Article'}
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"></line>
             <polyline points="12 5 19 12 12 19"></polyline>
@@ -642,11 +718,38 @@ function renderBlogFeed() {
       </div>
     `;
     card.addEventListener('click', () => {
-      window.location.hash = `#blog/${post.slug}`;
+      window.location.hash = `#${currentLang}/blog/${post.slug}`;
     });
     blogPostsList.appendChild(card);
   });
 }
+
+// Bind language switch buttons
+document.querySelectorAll('[data-switch-lang]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const newLang = btn.getAttribute('data-switch-lang');
+    if (!newLang) return;
+    
+    const hash = window.location.hash || '#en/home';
+    const match = hash.match(/^#(en|ru)(?:\/(.*))?$/);
+    if (match) {
+      const path = match[2] || 'home';
+      let targetPath = path;
+      // Swap slug language postfix if inside an article
+      if (path.startsWith('blog/')) {
+        const currentSlug = path.replace('blog/', '');
+        if (newLang === 'ru' && currentSlug.endsWith('-en')) {
+          targetPath = 'blog/' + currentSlug.replace('-en', '-ru');
+        } else if (newLang === 'en' && currentSlug.endsWith('-ru')) {
+          targetPath = 'blog/' + currentSlug.replace('-ru', '-en');
+        }
+      }
+      window.location.hash = `#${newLang}/${targetPath}`;
+    } else {
+      window.location.hash = `#${newLang}/home`;
+    }
+  });
+});
 
 // Bind navigation routes
 window.addEventListener('hashchange', router);
@@ -656,5 +759,3 @@ window.addEventListener('load', router);
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   router();
 }
-
-

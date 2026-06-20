@@ -31,14 +31,20 @@
         <span class="logo-text">Wasmee</span>
       </a>
       <nav class="nav-menu">
-        <a href="#features" class="nav-item">Features</a>
-        <a href="#benchmarks" class="nav-item">Benchmarks</a>
-        <a href="#code" class="nav-item">How it Works</a>
-        <a href="#blog" class="nav-item" id="nav-blog">Blog</a>
+        <a href="#features" class="nav-item" data-i18n="nav-features">Features</a>
+        <a href="#benchmarks" class="nav-item" data-i18n="nav-benchmarks">Benchmarks</a>
+        <a href="#code" class="nav-item" data-i18n="nav-how-it-works">How it Works</a>
+        <a href="#blog" class="nav-item" id="nav-blog" data-i18n="nav-blog">Blog</a>
         <a href="https://github.com/nativebpm/wasmee" class="nav-item" target="_blank">GitHub</a>
       </nav>
       <div class="nav-actions">
-        <a href="#get-started" class="btn btn-primary btn-sm">Get Started</a>
+        <!-- Language Switcher -->
+        <div class="lang-switcher">
+          <button class="lang-switch-btn" id="lang-en" data-switch-lang="en">EN</button>
+          <span class="lang-divider">|</span>
+          <button class="lang-switch-btn" id="lang-ru" data-switch-lang="ru">RU</button>
+        </div>
+        <a href="#get-started" class="btn btn-primary btn-sm" data-i18n="nav-get-started">Get Started</a>
       </div>
     </div>
   </header>
@@ -51,21 +57,21 @@
       <div class="hero-badge-wrapper">
         <div class="hero-badge">
           <span class="badge-pulse"></span>
-          <span>Wasmee v0.1.0 is officially released</span>
+          <span data-i18n="hero-release-badge">Wasmee v0.1.0 is officially released</span>
         </div>
       </div>
       
-      <h1 class="hero-title">
+      <h1 class="hero-title" data-i18n="hero-title">
         Run WebAssembly with <span class="gradient-text">Extreme Speed</span> & <span class="gradient-text-alt">Durable State</span>
       </h1>
       
-      <p class="hero-subtitle">
+      <p class="hero-subtitle" data-i18n="hero-subtitle">
         Wasmee is a sandboxed WebAssembly execution engine written in Rust on top of Wasmtime. Engineered for high-density, crash-resilient executions, providing microsecond startup times and native state checkpointing.
       </p>
 
       <div class="hero-ctas">
-        <a href="#get-started" class="btn btn-primary btn-lg">Install Wasmee</a>
-        <a href="#features" class="btn btn-secondary btn-lg">Explore Features</a>
+        <a href="#get-started" class="btn btn-primary btn-lg" data-i18n="hero-btn-install">Install Wasmee</a>
+        <a href="#features" class="btn btn-secondary btn-lg" data-i18n="hero-btn-explore">Explore Features</a>
       </div>
 
       <!-- Installation CLI Copy -->
@@ -90,39 +96,39 @@
             <span class="dot green"></span>
           </div>
           <div class="terminal-tabs">
-            <button class="terminal-tab active" data-tab="run">wasmee run</button>
-            <button class="terminal-tab" data-tab="snapshot">wasmee snapshot</button>
-            <button class="terminal-tab" data-tab="bench">wasmee bench</button>
+            <button class="terminal-tab active" data-tab="run" data-i18n="tab-title-run">wasmee run</button>
+            <button class="terminal-tab" data-tab="snapshot" data-i18n="tab-title-snapshot">wasmee snapshot</button>
+            <button class="terminal-tab" data-tab="bench" data-i18n="tab-title-bench">wasmee bench</button>
           </div>
         </div>
         <div class="terminal-body">
           <div class="terminal-content active" id="tab-run">
             <div class="line"><span class="prompt">$</span> wasmee run guest_process.wasm --env vars.json</div>
-            <div class="line success"><span class="info">[info]</span> Compiling guest_process.wasm (Wasmtime JIT)...</div>
-            <div class="line"><span class="info">[info]</span> Instance initialized. Gas configured: 10,000,000. Memory limit: 32MB.</div>
-            <div class="line"><span class="log">[log]</span>  Evaluating payload: { "order_total": 4500, "customer": "ACME Corp" }</div>
-            <div class="line"><span class="log">[log]</span>  Host variable exchanged. Calling set_variable("tax_rate", 0.15)</div>
-            <div class="line success"><span class="info">[success]</span> Task executed in 39.6 microseconds. Memory footprint: 4.2 MB.</div>
+            <div class="line success"><span class="info">[info]</span> <span data-i18n="term-run-compiling">Compiling guest_process.wasm (Wasmtime JIT)...</span></div>
+            <div class="line"><span class="info">[info]</span> <span data-i18n="term-run-initialized">Instance initialized. Gas configured: 10,000,000. Memory limit: 32MB.</span></div>
+            <div class="line"><span class="log">[log]</span>  <span data-i18n="term-run-evaluating">Evaluating payload: { "order_total": 4500, "customer": "ACME Corp" }</span></div>
+            <div class="line"><span class="log">[log]</span>  <span data-i18n="term-run-exchanged">Host variable exchanged. Calling set_variable("tax_rate", 0.15)</span></div>
+            <div class="line success"><span class="info">[success]</span> <span data-i18n="term-run-success">Task executed in 39.6 microseconds. Memory footprint: 4.2 MB.</span></div>
           </div>
           <div class="terminal-content" id="tab-snapshot">
             <div class="line"><span class="prompt">$</span> wasmee snapshot create guest_process.wasm --out snapshot.bin</div>
-            <div class="line"><span class="info">[info]</span> Running process step 1 of 5...</div>
-            <div class="line warning"><span class="warn">[warn]</span> Snapshot triggered at guest execution checkpoint (Step 2).</div>
-            <div class="line"><span class="info">[info]</span> Serializing VM instance memory layout (14 pages)...</div>
-            <div class="line success"><span class="info">[success]</span> Snapshot binary written to database (280 KB). VM state saved.</div>
+            <div class="line"><span class="info">[info]</span> <span data-i18n="term-snap-step1">Running process step 1 of 5...</span></div>
+            <div class="line warning"><span class="warn">[warn]</span> <span data-i18n="term-snap-warn">Snapshot triggered at guest execution checkpoint (Step 2).</span></div>
+            <div class="line"><span class="info">[info]</span> <span data-i18n="term-snap-serializing">Serializing VM instance memory layout (14 pages)...</span></div>
+            <div class="line success"><span class="info">[success]</span> <span data-i18n="term-snap-success">Snapshot binary written to database (280 KB). VM state saved.</span></div>
             <div class="line"><span class="prompt">$</span> wasmee snapshot resume snapshot.bin</div>
-            <div class="line success"><span class="info">[success]</span> VM state restored. Resuming step 3 with full memory context.</div>
+            <div class="line success"><span class="info">[success]</span> <span data-i18n="term-snap-resume">VM state restored. Resuming step 3 with full memory context.</span></div>
           </div>
           <div class="terminal-content" id="tab-bench">
             <div class="line"><span class="prompt">$</span> wasmee bench --concurrent 50 --duration 10s</div>
-            <div class="line"><span class="info">[info]</span> Warmup completed. Starting load benchmark...</div>
-            <div class="line">Running 50 virtual users.</div>
+            <div class="line"><span class="info">[info]</span> <span data-i18n="term-bench-warmup">Warmup completed. Starting load benchmark...</span></div>
+            <div class="line"><span data-i18n="term-bench-running">Running 50 virtual users.</span></div>
             <div class="line">--------------------------------------------------</div>
-            <div class="line">Warm Resume Latency (p50): <span class="highlight">39.6 µs</span></div>
-            <div class="line">Warm Resume Latency (p95): <span class="highlight">259.49 ms</span></div>
-            <div class="line">Throughput (In-Memory VM): <span class="highlight">25,274 RPS</span></div>
-            <div class="line">Throughput (HTTP API):     <span class="highlight">382.25 RPS</span></div>
-            <div class="line">SLA Checks Pass Rate:      <span class="success">100%</span></div>
+            <div class="line"><span data-i18n="term-bench-latency-p50">Warm Resume Latency (p50):</span> <span class="highlight">39.6 µs</span></div>
+            <div class="line"><span data-i18n="term-bench-latency-p95">Warm Resume Latency (p95):</span> <span class="highlight">259.49 ms</span></div>
+            <div class="line"><span data-i18n="term-bench-throughput-vm">Throughput (In-Memory VM):</span> <span class="highlight">25,274 RPS</span></div>
+            <div class="line"><span data-i18n="term-bench-throughput-http">Throughput (HTTP API):</span>     <span class="highlight">382.25 RPS</span></div>
+            <div class="line"><span data-i18n="term-bench-sla">SLA Checks Pass Rate:</span>      <span class="success">100%</span></div>
           </div>
 
         </div>
@@ -136,32 +142,32 @@
       <div class="metrics-grid">
         <div class="metric-card">
           <div class="metric-value">&lt; 40 µs</div>
-          <div class="metric-label">Warm Resume Latency</div>
-          <div class="metric-desc">Fastest state recovery among modern WebAssembly runner platforms.</div>
+          <div class="metric-label" data-i18n="metric-label-latency">Warm Resume Latency</div>
+          <div class="metric-desc" data-i18n="metric-desc-latency">Fastest state recovery among modern WebAssembly runner platforms.</div>
         </div>
         <div class="metric-card">
           <div class="metric-value">32 MB</div>
-          <div class="metric-label">Memory Sandboxing</div>
-          <div class="metric-desc">Zero-trust memory boundary controls preventing CPU leaks and heap-overruns.</div>
+          <div class="metric-label" data-i18n="metric-label-sandboxing">Memory Sandboxing</div>
+          <div class="metric-desc" data-i18n="metric-desc-sandboxing">Zero-trust memory boundary controls preventing CPU leaks and heap-overruns.</div>
         </div>
         <div class="metric-card">
           <div class="metric-value">25k+</div>
-          <div class="metric-label">In-Memory RPS</div>
-          <div class="metric-desc">Blazing throughput executing sandboxed WebAssembly tasks on a single node.</div>
+          <div class="metric-label" data-i18n="metric-label-throughput">In-Memory RPS</div>
+          <div class="metric-desc" data-i18n="metric-desc-throughput">Blazing throughput executing sandboxed WebAssembly tasks on a single node.</div>
         </div>
         <div class="metric-card">
           <div class="metric-value">100%</div>
-          <div class="metric-label">Pure Sandboxed Safety</div>
-          <div class="metric-desc">Completely blocks untrusted network access, filesystem writes, and process fork APIs.</div>
+          <div class="metric-label" data-i18n="metric-label-safety">Pure Sandboxed Safety</div>
+          <div class="metric-desc" data-i18n="metric-desc-safety">Completely blocks untrusted network access, filesystem writes, and process fork APIs.</div>
         </div>
       </div>
       <div class="metrics-cta" style="text-align: center; margin-top: 3rem;">
-        <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.95rem;">Want to run these benchmarks yourself?</p>
+        <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.95rem;" data-i18n="metric-cta-text">Want to run these benchmarks yourself?</p>
         <a href="https://github.com/nativebpm/wasmee#performance--load-testing" target="_blank" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 8px;">
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
           </svg>
-          View Load Testing Guide & Source
+          <span data-i18n="metric-cta-btn">View Load Testing Guide & Source</span>
         </a>
       </div>
     </div>
@@ -171,8 +177,8 @@
   <section class="features-section" id="features">
     <div class="container">
       <div class="section-header">
-        <h2 class="section-title">Designed for Durable Micro-Tasks</h2>
-        <p class="section-subtitle">Why teams choose Wasmee for executing business logic and untrusted user-submitted code.</p>
+        <h2 class="section-title" data-i18n="features-title">Designed for Durable Micro-Tasks</h2>
+        <p class="section-subtitle" data-i18n="features-subtitle">Why teams choose Wasmee for executing business logic and untrusted user-submitted code.</p>
       </div>
 
       <div class="features-grid">
@@ -186,8 +192,8 @@
               <line x1="3" y1="15" x2="21" y2="15"></line>
             </svg>
           </div>
-          <h3 class="feature-title">Durable Snapshots</h3>
-          <p class="feature-desc">Serialize full memory states to PostgreSQL or AWS S3. Restore execution seamlessly even if the host machine crashes mid-step.</p>
+          <h3 class="feature-title" data-i18n="feature-title-snapshots">Durable Snapshots</h3>
+          <p class="feature-desc" data-i18n="feature-desc-snapshots">Serialize full memory states to PostgreSQL or AWS S3. Restore execution seamlessly even if the host machine crashes mid-step.</p>
         </div>
 
         <div class="feature-card">
@@ -196,8 +202,8 @@
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
             </svg>
           </div>
-          <h3 class="feature-title">Rust-Native JIT Performance</h3>
-          <p class="feature-desc">Compiles guest WebAssembly modules directly into machine code via Wasmtime Cranelift JIT. No virtual containers, no JVM overhead.</p>
+          <h3 class="feature-title" data-i18n="feature-title-jit">Rust-Native JIT Performance</h3>
+          <p class="feature-desc" data-i18n="feature-desc-jit">Compiles guest WebAssembly modules directly into machine code via Wasmtime Cranelift JIT. No virtual containers, no JVM overhead.</p>
         </div>
 
         <div class="feature-card">
@@ -207,8 +213,8 @@
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
           </div>
-          <h3 class="feature-title">Zero-Trust Security</h3>
-          <p class="feature-desc">Strict execution constraints. Blocks unauthorized host network calls, directory listings, command lines, and OS threads.</p>
+          <h3 class="feature-title" data-i18n="feature-title-security">Zero-Trust Security</h3>
+          <p class="feature-desc" data-i18n="feature-desc-security">Strict execution constraints. Blocks unauthorized host network calls, directory listings, command lines, and OS threads.</p>
         </div>
 
         <div class="feature-card">
@@ -218,8 +224,8 @@
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
           </div>
-          <h3 class="feature-title">Microsecond Cold Starts</h3>
-          <p class="feature-desc">Keeps a hot-cache pool of compiled modules ready to execute instantly. Reduces guest initialization overhead to near-zero.</p>
+          <h3 class="feature-title" data-i18n="feature-title-coldstarts">Microsecond Cold Starts</h3>
+          <p class="feature-desc" data-i18n="feature-desc-coldstarts">Keeps a hot-cache pool of compiled modules ready to execute instantly. Reduces guest initialization overhead to near-zero.</p>
         </div>
 
         <div class="feature-card">
@@ -228,8 +234,8 @@
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
             </svg>
           </div>
-          <h3 class="feature-title">Gas-Metered Execution</h3>
-          <p class="feature-desc">Prevent resource exhaustion and infinite loops by defining strict execution limits (gas budgets) for untrusted guest tasks.</p>
+          <h3 class="feature-title" data-i18n="feature-title-gas">Gas-Metered Execution</h3>
+          <p class="feature-desc" data-i18n="feature-desc-gas">Prevent resource exhaustion and infinite loops by defining strict execution limits (gas budgets) for untrusted guest tasks.</p>
         </div>
 
         <div class="feature-card">
@@ -240,8 +246,8 @@
               <line x1="12" y1="22.08" x2="12" y2="12"></line>
             </svg>
           </div>
-          <h3 class="feature-title">Seamless Variable Exchange</h3>
-          <p class="feature-desc">Bidirectional serialization mappings. Read/write execution context variables using simple import functions directly from guest Wasm.</p>
+          <h3 class="feature-title" data-i18n="feature-title-exchange">Seamless Variable Exchange</h3>
+          <p class="feature-desc" data-i18n="feature-desc-exchange">Bidirectional serialization mappings. Read/write execution context variables using simple import functions directly from guest Wasm.</p>
         </div>
       </div>
     </div>
@@ -251,8 +257,8 @@
   <section class="code-section" id="code">
     <div class="container">
       <div class="section-header">
-        <h2 class="section-title">Write Once. Run and Persist Anywhere.</h2>
-        <p class="section-subtitle">How guest scripts leverage Wasmee host bindings for state-resilient executions.</p>
+        <h2 class="section-title" data-i18n="code-title">Write Once. Run and Persist Anywhere.</h2>
+        <p class="section-subtitle" data-i18n="code-subtitle">How guest scripts leverage Wasmee host bindings for state-resilient executions.</p>
       </div>
 
       <div class="code-playground">
@@ -303,7 +309,7 @@ function execute(vars) {
     // Returns object back to host variables state
     return {
         calculated_tax: tax
-    };
+      };
 }</code></pre>
             <pre class="code-block" id="code-go"><code class="language-go">package main
 
@@ -333,40 +339,40 @@ func main() {}</code></pre>
             <div class="code-block" id="code-fiddle">
               <div class="fiddle-form">
                 <div class="form-group">
-                  <label for="fiddle-repo">Git Repository URL (GitHub/GitLab)</label>
-                  <input type="text" id="fiddle-repo" class="form-input" placeholder="https://github.com/nativebpm/wasmee" value="https://github.com/nativebpm/wasmee">
+                  <label for="fiddle-repo" data-i18n="fiddle-label-repo">Git Repository URL (GitHub/GitLab)</label>
+                  <input type="text" id="fiddle-repo" class="form-input" data-i18n-placeholder="fiddle-label-repo" placeholder="https://github.com/nativebpm/wasmee" value="https://github.com/nativebpm/wasmee">
                 </div>
                 <div class="form-row">
                   <div class="form-group col">
-                    <label for="fiddle-ref">Git Ref (Branch/Tag)</label>
-                    <input type="text" id="fiddle-ref" class="form-input" placeholder="main" value="main">
+                    <label for="fiddle-ref" data-i18n="fiddle-label-ref">Git Ref (Branch/Tag)</label>
+                    <input type="text" id="fiddle-ref" class="form-input" data-i18n-placeholder="fiddle-label-ref" placeholder="main" value="main">
                   </div>
                   <div class="form-group col">
-                    <label for="fiddle-path">File Path (WASM or ZIP)</label>
-                    <input type="text" id="fiddle-path" class="form-input" placeholder="guest.wasm" value="guest/target/wasm32-wasip1/release/wasmee_guest.wasm">
+                    <label for="fiddle-path" data-i18n="fiddle-label-path">File Path (WASM or ZIP)</label>
+                    <input type="text" id="fiddle-path" class="form-input" data-i18n-placeholder="fiddle-label-path" placeholder="guest.wasm" value="guest/target/wasm32-wasip1/release/wasmee_guest.wasm">
                   </div>
                 </div>
                 <div class="form-group">
-                  <label for="fiddle-token">Git Token (Optional)</label>
-                  <input type="password" id="fiddle-token" class="form-input" placeholder="github_pat_...">
+                  <label for="fiddle-token" data-i18n="fiddle-label-token">Git Token (Optional)</label>
+                  <input type="password" id="fiddle-token" class="form-input" data-i18n-placeholder="fiddle-label-token" placeholder="github_pat_...">
                 </div>
                 <div class="form-row">
                   <div class="form-group col">
-                    <label for="fiddle-gas">Max Gas (Fuel Limit)</label>
-                    <input type="number" id="fiddle-gas" class="form-input" placeholder="10000000" value="10000000">
+                    <label for="fiddle-gas" data-i18n="fiddle-label-gas">Max Gas (Fuel Limit)</label>
+                    <input type="number" id="fiddle-gas" class="form-input" data-i18n-placeholder="fiddle-label-gas" placeholder="10000000" value="10000000">
                   </div>
                   <div class="form-group col">
-                    <label for="fiddle-memory">Max Memory limit (MB)</label>
-                    <input type="number" id="fiddle-memory" class="form-input" placeholder="32" value="32">
+                    <label for="fiddle-memory" data-i18n="fiddle-label-memory">Max Memory limit (MB)</label>
+                    <input type="number" id="fiddle-memory" class="form-input" data-i18n-placeholder="fiddle-label-memory" placeholder="32" value="32">
                   </div>
                 </div>
                 <div class="form-group">
-                  <label>Input State (JSON)</label>
+                  <label data-i18n="fiddle-label-input">Input State (JSON)</label>
                   <div id="fiddle-payload-editor" style="height: 120px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-light); font-family: monospace;"></div>
                 </div>
                 <div class="form-group" style="margin-top: 1rem; padding: 0.75rem; background: rgba(255,255,255,0.03); border: 1px dashed var(--border-light); border-radius: 6px; font-size: 0.85rem;">
-                  <span style="color: var(--text-primary); font-weight: 500; display: block; margin-bottom: 0.25rem;">⚡ GitOps Webhook (Zero Pipeline Hot-Reload)</span>
-                  <p style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.8rem; line-height: 1.3;">
+                  <span style="color: var(--text-primary); font-weight: 500; display: block; margin-bottom: 0.25rem;" data-i18n="fiddle-gitops-title">⚡ GitOps Webhook (Zero Pipeline Hot-Reload)</span>
+                  <p style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.8rem; line-height: 1.3;" data-i18n="fiddle-gitops-desc">
                     Register this URL as a Webhook in GitHub or GitLab to automatically hot-reload the JIT cache on push:
                   </p>
                   <div style="display: flex; gap: 8px; align-items: center; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-light);">
@@ -374,9 +380,9 @@ func main() {}</code></pre>
                   </div>
                 </div>
                 <div class="fiddle-actions">
-                  <button type="button" id="btn-warmup" class="btn btn-secondary btn-sm">Pre-Warm (JIT)</button>
-                  <button type="button" id="btn-sync" class="btn btn-secondary btn-sm" style="background: var(--bg-card); border-color: var(--border-light);">Sync from Git</button>
-                  <button type="button" id="btn-execute" class="btn btn-primary btn-sm">Run on Wasmee</button>
+                  <button type="button" id="btn-warmup" class="btn btn-secondary btn-sm" data-i18n="fiddle-btn-warm">Pre-Warm (JIT)</button>
+                  <button type="button" id="btn-sync" class="btn btn-secondary btn-sm" style="background: var(--bg-card); border-color: var(--border-light);" data-i18n="fiddle-btn-sync">Sync from Git</button>
+                  <button type="button" id="btn-execute" class="btn btn-primary btn-sm" data-i18n="fiddle-btn-exec">Run on Wasmee</button>
                 </div>
               </div>
             </div>
@@ -385,7 +391,7 @@ func main() {}</code></pre>
 
         <div class="code-output-panel">
           <div class="output-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <span class="output-title">Execution Console</span>
+            <span class="output-title" data-i18n="fiddle-console-title">Execution Console</span>
             <div id="cache-status-indicator" style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-muted);">
               <span class="status-dot" style="width: 8px; height: 8px; background-color: var(--text-muted); border-radius: 50%; display: inline-block; transition: all 0.3s ease;"></span>
               <span class="status-text">Stateless Mode</span>
@@ -408,11 +414,11 @@ func main() {}</code></pre>
   <!-- CTA Section -->
   <section class="cta-section" id="get-started">
     <div class="cta-container">
-      <h2 class="cta-title">Build High-Density Durable Executions</h2>
-      <p class="cta-subtitle">Run untrusted user logic, scale microservices, or orchestrate complex execution pipelines at the speed of native code.</p>
+      <h2 class="cta-title" data-i18n="cta-title">Build High-Density Durable Executions</h2>
+      <p class="cta-subtitle" data-i18n="cta-subtitle">Run untrusted user logic, scale microservices, or orchestrate complex execution pipelines at the speed of native code.</p>
       <div class="cta-buttons">
-        <a href="https://github.com/nativebpm/wasmee" class="btn btn-primary btn-lg" target="_blank">View on GitHub</a>
-        <a href="#code" class="btn btn-secondary btn-lg">View SDK Guides</a>
+        <a href="https://github.com/nativebpm/wasmee" class="btn btn-primary btn-lg" target="_blank" data-i18n="cta-btn-github">View on GitHub</a>
+        <a href="#code" class="btn btn-secondary btn-lg" data-i18n="cta-btn-docs">View SDK Guides</a>
       </div>
     </div>
   </section>
@@ -429,8 +435,8 @@ func main() {}</code></pre>
         <!-- Feed View -->
         <div id="blog-feed-view">
           <div class="section-header animate-fade-in" style="margin-top: 7rem; text-align: center; margin-bottom: 4rem;">
-            <h2 class="section-title">Wasmee Blog</h2>
-            <p class="section-subtitle">Insights, technical deep-dives, and updates from the Wasmee core team.</p>
+            <h2 class="section-title" data-i18n="blog-title">Wasmee Blog</h2>
+            <p class="section-subtitle" data-i18n="blog-subtitle">Insights, technical deep-dives, and updates from the Wasmee core team.</p>
           </div>
           <div class="blog-grid" id="blog-posts-list">
             <!-- Dynamically populated or static cards -->
@@ -445,7 +451,7 @@ func main() {}</code></pre>
                 <line x1="19" y1="12" x2="5" y2="12"></line>
                 <polyline points="12 19 5 12 12 5"></polyline>
               </svg>
-              Back to Blog
+              <span data-i18n="blog-btn-back">Back to Blog</span>
             </a>
           </div>
           <article class="blog-article-content">
@@ -475,7 +481,7 @@ func main() {}</code></pre>
         <div class="logo-icon">W</div>
         <span class="logo-text">Wasmee</span>
       </div>
-      <div class="footer-copyright">
+      <div class="footer-copyright" data-i18n="footer-copyright">
         &copy; 2026 Wasmee Authors. Part of the NativeBPM platform. Released under the Apache 2.0 License.
       </div>
     </div>

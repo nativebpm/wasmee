@@ -1101,3 +1101,45 @@ p {
     font-size: 2rem !important;
   }
 }
+
+/* Language Switcher Styling */
+.lang-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-light);
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  margin-right: 1.25rem;
+}
+
+.lang-switch-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  transition: var(--transition-fast);
+}
+
+.lang-switch-btn:hover {
+  color: var(--text-primary);
+}
+
+.lang-switch-btn.active {
+  color: #fff;
+  background: rgba(139, 92, 246, 0.25);
+  text-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
+}
+
+.lang-divider {
+  color: var(--border-light);
+  font-size: 0.85rem;
+  opacity: 0.5;
+}
+
