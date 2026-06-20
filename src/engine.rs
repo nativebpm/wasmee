@@ -101,6 +101,7 @@ pub struct VMState {
     pub page_hashes: HashMap<i32, u64>,
     pub store: RustStore,
     pub checkpoints: Vec<CheckpointData>,
+    pub limits: wasmtime::StoreLimits,
 }
 
 pub struct RunResult {
@@ -161,6 +162,7 @@ pub fn run_wasm(
         initial_call_index,
         store,
         exchange_buffer,
+        None,
     )
 }
 
@@ -176,6 +178,7 @@ pub fn run_wasm_precompiled(
     initial_call_index: i32,
     store: RustStore,
     exchange_buffer: &[u8],
+    sandbox_config: Option<&crate::pb::SandboxConfig>,
 ) -> RunResult {
     let mut linker = Linker::new(engine);
 
@@ -373,6 +376,19 @@ pub fn run_wasm_precompiled(
     let restored_mem = restore_memory(base_snapshot, memory_deltas);
     let (_, initial_page_hashes) = calculate_deltas(&restored_mem, &HashMap::new());
 
+    let (max_fuel, max_mem_mb) = if let Some(config) = sandbox_config {
+        (
+            if config.max_fuel == 0 { 10_000_000 } else { config.max_fuel },
+            if config.max_memory_mb == 0 { 32 } else { config.max_memory_mb }
+        )
+    } else {
+        (10_000_000, 32)
+    };
+
+    let limits = wasmtime::StoreLimitsBuilder::new()
+        .memory_size(max_mem_mb as usize * 1024 * 1024)
+        .build();
+
     let mut store_obj = Store::new(
         module.engine(),
         VMState {
@@ -382,9 +398,11 @@ pub fn run_wasm_precompiled(
             page_hashes: initial_page_hashes,
             store,
             checkpoints: vec![],
+            limits,
         },
     );
-    let _ = store_obj.set_fuel(10_000_000);
+    store_obj.limiter(|state| &mut state.limits);
+    let _ = store_obj.set_fuel(max_fuel);
 
 
     // Instantiate module

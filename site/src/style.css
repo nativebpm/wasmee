@@ -868,3 +868,59 @@ p {
     text-align: center;
   }
 }
+
+/* Fiddle Form Styles */
+#code-fiddle {
+  padding: 1.5rem;
+  color: var(--text-primary);
+  display: none;
+}
+#code-fiddle.active {
+  display: block;
+}
+.fiddle-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+}
+.form-group label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+.form-row .col {
+  flex: 1;
+}
+.form-input, .form-textarea {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  color: var(--text-primary);
+  font-family: 'Fira Code', monospace;
+  font-size: 0.85rem;
+  transition: var(--transition-fast);
+}
+.form-input:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--accent-purple);
+  background: rgba(255, 255, 255, 0.05);
+}
+.form-textarea {
+  resize: vertical;
+}
+.fiddle-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}

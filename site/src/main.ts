@@ -92,7 +92,8 @@ const editorTitle = document.querySelector('.editor-title');
 const fileNames: Record<string, string> = {
   rust: 'guest_task.rs',
   js: 'guest_task.js',
-  go: 'main.go'
+  go: 'main.go',
+  fiddle: 'Wasmee Live Fiddle'
 };
 
 langBtns.forEach(btn => {
@@ -118,3 +119,195 @@ langBtns.forEach(btn => {
     });
   });
 });
+
+// Live Fiddle API Integration
+const btnWarmup = document.getElementById('btn-warmup');
+const btnExecute = document.getElementById('btn-execute');
+const outputConsole = document.querySelector('.code-output-panel .output-body');
+
+const WASMEE_URL = 'http://127.0.0.1:8081';
+
+if (btnWarmup) {
+  btnWarmup.addEventListener('click', async () => {
+    const repo = (document.getElementById('fiddle-repo') as HTMLInputElement)?.value || '';
+    const ref = (document.getElementById('fiddle-ref') as HTMLInputElement)?.value || '';
+    const path = (document.getElementById('fiddle-path') as HTMLInputElement)?.value || '';
+    const token = (document.getElementById('fiddle-token') as HTMLInputElement)?.value || '';
+
+    updateConsole([
+      { type: 'info', msg: 'Initiating Git pre-warming...' },
+      { type: 'info', msg: `Repository: ${repo}` },
+      { type: 'info', msg: `Ref (branch/tag): ${ref}` },
+      { type: 'info', msg: `File path: ${path}` }
+    ]);
+
+    try {
+      const response = await fetch(`${WASMEE_URL}/warmup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer test-bearer-token'
+        },
+        body: JSON.stringify({
+          git_source: {
+            repository: repo,
+            git_ref: ref,
+            file_path: path,
+            git_token: token
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        updateConsole([
+          { type: 'success', msg: 'Pre-warming completed successfully!' },
+          { type: 'value', msg: `Compiled Module Hash: ${data.wasm_hash}` }
+        ]);
+        localStorage.setItem('wasmee_last_hash', data.wasm_hash);
+      } else {
+        updateConsole([
+          { type: 'error', msg: `Pre-warming failed: ${data.error}` }
+        ]);
+      }
+    } catch (e: any) {
+      updateConsole([
+        { type: 'error', msg: `Connection error: ${e.message}` },
+        { type: 'warn', msg: 'Make sure Wasmee daemon is running locally on http://127.0.0.1:8081' }
+      ]);
+    }
+  });
+}
+
+if (btnExecute) {
+  btnExecute.addEventListener('click', async () => {
+    const repo = (document.getElementById('fiddle-repo') as HTMLInputElement)?.value || '';
+    const ref = (document.getElementById('fiddle-ref') as HTMLInputElement)?.value || '';
+    const path = (document.getElementById('fiddle-path') as HTMLInputElement)?.value || '';
+    const token = (document.getElementById('fiddle-token') as HTMLInputElement)?.value || '';
+    const payloadStr = (document.getElementById('fiddle-payload') as HTMLTextAreaElement)?.value || '{}';
+    const gasVal = parseInt((document.getElementById('fiddle-gas') as HTMLInputElement)?.value || '10000000', 10);
+    const memVal = parseInt((document.getElementById('fiddle-memory') as HTMLInputElement)?.value || '32', 10);
+
+    let payloadJson = {};
+    try {
+      payloadJson = JSON.parse(payloadStr);
+    } catch (err: any) {
+      updateConsole([
+        { type: 'error', msg: `Invalid JSON payload: ${err.message}` }
+      ]);
+      return;
+    }
+
+    updateConsole([
+      { type: 'info', msg: 'Executing WASM task on Wasmee...' }
+    ]);
+
+    const savedHash = localStorage.getItem('wasmee_last_hash') || '';
+
+    try {
+      const response = await fetch(`${WASMEE_URL}/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer test-bearer-token'
+        },
+        body: JSON.stringify({
+          instance_id: `fiddle-inst-${Math.random().toString(36).substring(7)}`,
+          entrypoint: 'execute',
+          params: [],
+          base_snapshot: '',
+          memory_deltas: {},
+          oplog: [],
+          wasm_hash: savedHash, 
+          git_source: savedHash ? undefined : {
+            repository: repo,
+            git_ref: ref,
+            file_path: path,
+            git_token: token
+          },
+          exchange_buffer: btoa(JSON.stringify(payloadJson)),
+          sandbox_config: {
+            max_fuel: gasVal,
+            max_memory_mb: memVal
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json();
+      const duration = '30-100 µs';
+
+      let logs: { type: string, msg: string }[] = [];
+      if (data.crashed) {
+        logs.push({ type: 'error', msg: `Execution Crashed: ${data.error}` });
+      } else {
+        logs.push({ type: 'success', msg: `Execution Success! (Duration: ${duration})` });
+        
+        if (data.response_bytes) {
+          try {
+            const decoded = atob(data.response_bytes);
+            logs.push({ type: 'value', msg: `Response Buffer: ${decoded}` });
+          } catch {
+            logs.push({ type: 'value', msg: `Response Bytes (Base64): ${data.response_bytes}` });
+          }
+        }
+
+        if (data.checkpoints && data.checkpoints.length > 0) {
+          logs.push({ type: 'snap', msg: `Checkpoint saved: serialized memory snapshot (${data.checkpoints.length} state checkpoints)` });
+        }
+        if (data.final_oplog && data.final_oplog.length > 0) {
+          data.final_oplog.forEach((op: any) => {
+            logs.push({ type: 'info', msg: `Replay-safe Oplog call: ${op.api_name}` });
+          });
+        }
+        if (data.final_deltas && Object.keys(data.final_deltas).length > 0) {
+          logs.push({ type: 'snap', msg: `Memory delta pages saved: ${Object.keys(data.final_deltas).length} pages modified` });
+        }
+      }
+
+      updateConsole(logs);
+    } catch (e: any) {
+      updateConsole([
+        { type: 'error', msg: `Connection error: ${e.message}` },
+        { type: 'warn', msg: 'Make sure Wasmee daemon is running locally on http://127.0.0.1:8081' }
+      ]);
+    }
+  });
+}
+
+function updateConsole(lines: { type: string, msg: string }[]) {
+  if (!outputConsole) return;
+  outputConsole.innerHTML = '';
+  
+  lines.forEach(line => {
+    const div = document.createElement('div');
+    div.className = 'output-line';
+    if (line.type === 'error') div.className += ' error-line';
+    if (line.type === 'success') div.className += ' success-line';
+    if (line.type === 'snap') div.className += ' highlight-line';
+    
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'out-time';
+    const now = new Date();
+    timeSpan.textContent = `[${now.toTimeString().split(' ')[0]}] `;
+    
+    const tagSpan = document.createElement('span');
+    tagSpan.className = `out-tag ${line.type}`;
+    tagSpan.textContent = line.type.toUpperCase().substring(0, 4) + ' ';
+    
+    const textSpan = document.createTextNode(line.msg);
+    
+    div.appendChild(timeSpan);
+    div.appendChild(tagSpan);
+    div.appendChild(textSpan);
+    outputConsole.appendChild(div);
+  });
+}

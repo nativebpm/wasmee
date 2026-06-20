@@ -3,8 +3,10 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::{Mutex, RwLock};
 use axum::{routing::post, response::IntoResponse, Router};
 use wasmtime::{Engine, Module};
+use tower_http::cors::{CorsLayer, Any};
 
 pub mod engine;
+pub mod git_resolver;
 
 pub mod pb {
     include!(concat!(env!("OUT_DIR"), "/wasmee.rs"));
@@ -18,6 +20,81 @@ struct AppState {
     compiling: Mutex<HashMap<String, Arc<tokio::sync::Notify>>>,
     store: engine::RustStore,
     api_token: String,
+}
+
+impl AppState {
+    async fn get_or_compile_module(&self, wasm_bytes: Vec<u8>) -> Result<(Module, String), String> {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(&wasm_bytes);
+        let hash_hex = format!("{:x}", hasher.finalize());
+
+        let cached_module = {
+            let modules = self.modules.read().unwrap();
+            modules.get(&hash_hex).cloned()
+        };
+
+        match cached_module {
+            Some(m) => Ok((m, hash_hex)),
+            None => {
+                let notify = {
+                    let mut compiling = self.compiling.lock().unwrap();
+                    if let Some(n) = compiling.get(&hash_hex) {
+                        Some(n.clone())
+                    } else {
+                        let n = Arc::new(tokio::sync::Notify::new());
+                        compiling.insert(hash_hex.clone(), n);
+                        None
+                    }
+                };
+
+                if let Some(n) = notify {
+                    n.notified().await;
+                    let modules = self.modules.read().unwrap();
+                    match modules.get(&hash_hex).cloned() {
+                        Some(m) => Ok((m, hash_hex)),
+                        None => Err("Concurrent compilation failed".to_string()),
+                    }
+                } else {
+                    let engine_clone = self.engine.clone();
+                    let wasm_bytes_clone = wasm_bytes.clone();
+                    let compile_res = tokio::task::spawn_blocking(move || {
+                        Module::new(&engine_clone, &wasm_bytes_clone)
+                    }).await.unwrap();
+
+                    let notify_waiters = {
+                        let mut compiling = self.compiling.lock().unwrap();
+                        compiling.remove(&hash_hex)
+                    };
+
+                    let res = match compile_res {
+                        Ok(m) => {
+                            let mut modules = self.modules.write().unwrap();
+                            let mut order = self.modules_order.lock().unwrap();
+
+                            if !modules.contains_key(&hash_hex) {
+                                modules.insert(hash_hex.clone(), m.clone());
+                                order.push_back(hash_hex.clone());
+
+                                if order.len() > 100 {
+                                    if let Some(oldest) = order.pop_front() {
+                                        modules.remove(&oldest);
+                                    }
+                                }
+                            }
+                            Ok((m, hash_hex))
+                        }
+                        Err(e) => Err(format!("Failed to compile dynamic WASM module: {}", e)),
+                    };
+
+                    if let Some(nw) = notify_waiters {
+                        nw.notify_waiters();
+                    }
+                    res
+                }
+            }
+        }
+    }
 }
 
 #[tokio::main]
@@ -60,8 +137,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         api_token,
     });
 
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     let app = Router::new()
         .route("/execute", post(execute_handler))
+        .route("/warmup", post(warmup_handler))
+        .layer(cors)
         .layer(axum::extract::DefaultBodyLimit::max(20 * 1024 * 1024))
         .with_state(state);
 
@@ -80,7 +164,6 @@ async fn execute_handler(
     body_bytes: axum::body::Bytes,
 ) -> impl axum::response::IntoResponse {
     use prost::Message;
-    use sha2::{Digest, Sha256};
 
     // 1. Enforce Token Authentication
     let auth_header = headers.get(axum::http::header::AUTHORIZATION);
@@ -102,14 +185,33 @@ async fn execute_handler(
         ).into_response();
     }
 
-    let payload = match pb::ExecuteRequest::decode(body_bytes) {
-        Ok(req) => req,
-        Err(e) => {
-            return (
-                axum::http::StatusCode::BAD_REQUEST,
-                [("content-type", "text/plain")],
-                format!("Failed to decode protobuf request: {}", e).into_bytes(),
-            ).into_response();
+    let content_type = headers
+        .get(axum::http::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let is_json = content_type.contains("application/json");
+
+    let payload = if is_json {
+        match serde_json::from_slice::<pb::ExecuteRequest>(&body_bytes) {
+            Ok(req) => req,
+            Err(e) => {
+                return (
+                    axum::http::StatusCode::BAD_REQUEST,
+                    [("content-type", "text/plain")],
+                    format!("Failed to decode JSON request: {}", e).into_bytes(),
+                ).into_response();
+            }
+        }
+    } else {
+        match pb::ExecuteRequest::decode(body_bytes) {
+            Ok(req) => req,
+            Err(e) => {
+                return (
+                    axum::http::StatusCode::BAD_REQUEST,
+                    [("content-type", "text/plain")],
+                    format!("Failed to decode protobuf request: {}", e).into_bytes(),
+                ).into_response();
+            }
         }
     };
 
@@ -134,74 +236,19 @@ async fn execute_handler(
     }
 
     let module_res = if !payload.wasm_bytes.is_empty() {
-        let mut hasher = Sha256::new();
-        hasher.update(&payload.wasm_bytes);
-        let hash_hex = format!("{:x}", hasher.finalize());
-
-        let cached_module = {
-            let modules = state.modules.read().unwrap();
-            modules.get(&hash_hex).cloned()
-        };
-
-        match cached_module {
-            Some(m) => ModuleResolveResult::Ok(m),
-            None => {
-                let notify = {
-                    let mut compiling = state.compiling.lock().unwrap();
-                    if let Some(n) = compiling.get(&hash_hex) {
-                        Some(n.clone())
-                    } else {
-                        let n = Arc::new(tokio::sync::Notify::new());
-                        compiling.insert(hash_hex.clone(), n);
-                        None
-                    }
-                };
-
-                if let Some(n) = notify {
-                    n.notified().await;
-                    let modules = state.modules.read().unwrap();
-                    match modules.get(&hash_hex).cloned() {
-                        Some(m) => ModuleResolveResult::Ok(m),
-                        None => ModuleResolveResult::Err("Concurrent compilation failed".to_string()),
-                    }
-                } else {
-                    let engine_clone = engine.clone();
-                    let wasm_bytes_clone = payload.wasm_bytes.clone();
-                    let compile_res = tokio::task::spawn_blocking(move || {
-                        Module::new(&engine_clone, &wasm_bytes_clone)
-                    }).await.unwrap();
-
-                    let notify_waiters = {
-                        let mut compiling = state.compiling.lock().unwrap();
-                        compiling.remove(&hash_hex)
-                    };
-
-                    let res = match compile_res {
-                        Ok(m) => {
-                            let mut modules = state.modules.write().unwrap();
-                            let mut order = state.modules_order.lock().unwrap();
-
-                            if !modules.contains_key(&hash_hex) {
-                                modules.insert(hash_hex.clone(), m.clone());
-                                order.push_back(hash_hex.clone());
-
-                                if order.len() > 100 {
-                                    if let Some(oldest) = order.pop_front() {
-                                        modules.remove(&oldest);
-                                    }
-                                }
-                            }
-                            ModuleResolveResult::Ok(m)
-                        }
-                        Err(e) => ModuleResolveResult::Err(format!("Failed to compile dynamic WASM module: {}", e)),
-                    };
-
-                    if let Some(nw) = notify_waiters {
-                        nw.notify_waiters();
-                    }
-                    res
+        match state.get_or_compile_module(payload.wasm_bytes).await {
+            Ok((m, _hash)) => ModuleResolveResult::Ok(m),
+            Err(e) => ModuleResolveResult::Err(e),
+        }
+    } else if let Some(git_src) = payload.git_source {
+        match git_resolver::resolve_git_source(&git_src).await {
+            Ok(bytes) => {
+                match state.get_or_compile_module(bytes).await {
+                    Ok((m, _hash)) => ModuleResolveResult::Ok(m),
+                    Err(e) => ModuleResolveResult::Err(e),
                 }
             }
+            Err(e) => ModuleResolveResult::Err(format!("Git resolution failed: {}", e)),
         }
     } else if !payload.wasm_hash.is_empty() {
         let cached_module = {
@@ -215,14 +262,45 @@ async fn execute_handler(
     } else {
         match &state.default_module {
             Some(m) => ModuleResolveResult::Ok(m.clone()),
-            None => ModuleResolveResult::Err("No WASM module or hash provided in request and no default guest module loaded on host".to_string()),
+            None => ModuleResolveResult::Err("No WASM module, Git source, or hash provided in request and no default guest module loaded on host".to_string()),
+        }
+    };
+
+    let send_response = |resp: pb::ExecuteResponse| {
+        if is_json {
+            match serde_json::to_vec(&resp) {
+                Ok(buf) => (
+                    axum::http::StatusCode::OK,
+                    [("content-type", "application/json")],
+                    buf,
+                ).into_response(),
+                Err(e) => (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    [("content-type", "text/plain")],
+                    format!("Failed to encode JSON response: {}", e).into_bytes(),
+                ).into_response(),
+            }
+        } else {
+            let mut buf = Vec::new();
+            if let Err(e) = resp.encode(&mut buf) {
+                return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    [("content-type", "text/plain")],
+                    format!("Failed to encode protobuf response: {}", e).into_bytes(),
+                ).into_response();
+            }
+            (
+                axum::http::StatusCode::OK,
+                [("content-type", "application/x-protobuf")],
+                buf,
+            ).into_response()
         }
     };
 
     let module = match module_res {
         ModuleResolveResult::Ok(m) => m,
         ModuleResolveResult::NotFoundInCache => {
-            let resp = pb::ExecuteResponse {
+            return send_response(pb::ExecuteResponse {
                 crashed: true,
                 error: "Module not found in cache".to_string(),
                 final_deltas: HashMap::new(),
@@ -230,17 +308,10 @@ async fn execute_handler(
                 checkpoints: vec![],
                 response_bytes: vec![],
                 module_not_found: true,
-            };
-            let mut buf = Vec::new();
-            let _ = resp.encode(&mut buf);
-            return (
-                axum::http::StatusCode::OK,
-                [("content-type", "application/x-protobuf")],
-                buf,
-            ).into_response();
+            });
         }
         ModuleResolveResult::Err(err_msg) => {
-            let resp = pb::ExecuteResponse {
+            return send_response(pb::ExecuteResponse {
                 crashed: true,
                 error: err_msg,
                 final_deltas: HashMap::new(),
@@ -248,14 +319,7 @@ async fn execute_handler(
                 checkpoints: vec![],
                 response_bytes: vec![],
                 module_not_found: false,
-            };
-            let mut buf = Vec::new();
-            let _ = resp.encode(&mut buf);
-            return (
-                axum::http::StatusCode::OK,
-                [("content-type", "application/x-protobuf")],
-                buf,
-            ).into_response();
+            });
         }
     };
 
@@ -272,6 +336,7 @@ async fn execute_handler(
             initial_call_index,
             wasm_store,
             &payload.exchange_buffer,
+            payload.sandbox_config.as_ref(),
         )
     }).await.unwrap();
 
@@ -285,18 +350,127 @@ async fn execute_handler(
         module_not_found: false,
     };
 
-    let mut buf = Vec::new();
-    if let Err(e) = resp.encode(&mut buf) {
+    send_response(resp)
+}
+
+async fn warmup_handler(
+    axum::extract::State(state): axum::extract::State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    body_bytes: axum::body::Bytes,
+) -> impl axum::response::IntoResponse {
+    use prost::Message;
+
+    // 1. Enforce Token Authentication
+    let auth_header = headers.get(axum::http::header::AUTHORIZATION);
+    let is_auth = if let Some(val) = auth_header {
+        if let Ok(val_str) = val.to_str() {
+            val_str == format!("Bearer {}", state.api_token)
+        } else {
+            false
+        }
+    } else {
+        false
+    };
+
+    if !is_auth {
         return (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            axum::http::StatusCode::UNAUTHORIZED,
             [("content-type", "text/plain")],
-            format!("Failed to encode protobuf response: {}", e).into_bytes(),
+            b"Unauthorized: invalid or missing bearer token".to_vec(),
         ).into_response();
     }
 
-    (
-        axum::http::StatusCode::OK,
-        [("content-type", "application/x-protobuf")],
-        buf,
-    ).into_response()
+    let content_type = headers
+        .get(axum::http::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let is_json = content_type.contains("application/json");
+
+    let payload = if is_json {
+        match serde_json::from_slice::<pb::WarmupRequest>(&body_bytes) {
+            Ok(req) => req,
+            Err(e) => {
+                return (
+                    axum::http::StatusCode::BAD_REQUEST,
+                    [("content-type", "text/plain")],
+                    format!("Failed to decode JSON request: {}", e).into_bytes(),
+                ).into_response();
+            }
+        }
+    } else {
+        match pb::WarmupRequest::decode(body_bytes) {
+            Ok(req) => req,
+            Err(e) => {
+                return (
+                    axum::http::StatusCode::BAD_REQUEST,
+                    [("content-type", "text/plain")],
+                    format!("Failed to decode protobuf request: {}", e).into_bytes(),
+                ).into_response();
+            }
+        }
+    };
+
+    let send_response = |resp: pb::WarmupResponse| {
+        if is_json {
+            match serde_json::to_vec(&resp) {
+                Ok(buf) => (
+                    axum::http::StatusCode::OK,
+                    [("content-type", "application/json")],
+                    buf,
+                ).into_response(),
+                Err(e) => (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    [("content-type", "text/plain")],
+                    format!("Failed to encode JSON response: {}", e).into_bytes(),
+                ).into_response(),
+            }
+        } else {
+            let mut buf = Vec::new();
+            let _ = resp.encode(&mut buf);
+            (
+                axum::http::StatusCode::OK,
+                [("content-type", "application/x-protobuf")],
+                buf,
+            ).into_response()
+        }
+    };
+
+    let git_src = match payload.git_source {
+        Some(src) => src,
+        None => {
+            return send_response(pb::WarmupResponse {
+                success: false,
+                wasm_hash: "".to_string(),
+                error: "Missing git_source in request".to_string(),
+            });
+        }
+    };
+
+    match git_resolver::resolve_git_source(&git_src).await {
+        Ok(bytes) => {
+            match state.get_or_compile_module(bytes).await {
+                Ok((_module, hash)) => {
+                    send_response(pb::WarmupResponse {
+                        success: true,
+                        wasm_hash: hash,
+                        error: "".to_string(),
+                    })
+                }
+                Err(e) => {
+                    send_response(pb::WarmupResponse {
+                        success: false,
+                        wasm_hash: "".to_string(),
+                        error: format!("Failed to compile module: {}", e),
+                    })
+                }
+            }
+        }
+        Err(e) => {
+            send_response(pb::WarmupResponse {
+                success: false,
+                wasm_hash: "".to_string(),
+                error: format!("Git resolution failed: {}", e),
+            })
+        }
+    }
 }

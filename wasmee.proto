@@ -11,6 +11,18 @@ message OplogEntry {
   bytes response_payload = 4;
 }
 
+message GitSource {
+  string repository = 1;
+  string git_ref = 2; // Can be a branch, tag (e.g. v1.0.0), or commit hash
+  string file_path = 3;
+  string git_token = 4;
+}
+
+message SandboxConfig {
+  uint64 max_fuel = 1;
+  uint32 max_memory_mb = 2;
+}
+
 message ExecuteRequest {
   string instance_id = 1;
   string entrypoint = 2;
@@ -21,6 +33,18 @@ message ExecuteRequest {
   bytes exchange_buffer = 7;
   bytes wasm_bytes = 8;
   string wasm_hash = 9;
+  GitSource git_source = 10;
+  SandboxConfig sandbox_config = 11;
+}
+
+message WarmupRequest {
+  GitSource git_source = 1;
+}
+
+message WarmupResponse {
+  bool success = 1;
+  string wasm_hash = 2;
+  string error = 3;
 }
 
 

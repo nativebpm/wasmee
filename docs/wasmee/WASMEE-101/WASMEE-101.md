@@ -1,6 +1,6 @@
 ---
 task: WASMEE-101
-status: In Progress
+status: Done
 summary: Implementation of WASM Fiddle and Git pre-warming integration for Wasmee runtime.
 ---
 

@@ -4,4 +4,4 @@
 
 | ID | Название | Статус | Семантическое резюме |
 | :--- | :--- | :--- | :--- |
-| [WASMEE-101](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-101/WASMEE-101.md) | WASM Fiddle и интеграция с Git (прогрев) | В процессе | Реализация загрузки из Git, распаковки ZIP-архивов, прогрева модулей и интерактивного интерфейса Fiddle. |
+| [WASMEE-101](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-101/WASMEE-101.md) | WASM Fiddle и интеграция с Git (прогрев) | Выполнено | Реализация загрузки из Git, распаковки ZIP-архивов, прогрева модулей и интерактивного интерфейса Fiddle. |

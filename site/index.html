@@ -260,6 +260,7 @@
               <button class="lang-btn active" data-lang="rust">Rust</button>
               <button class="lang-btn" data-lang="js">JavaScript</button>
               <button class="lang-btn" data-lang="go">Go</button>
+              <button class="lang-btn" data-lang="fiddle">Live Fiddle</button>
             </div>
           </div>
           <div class="editor-body">
@@ -326,6 +327,46 @@ func execute() int32 {
 }
 
 func main() {}</code></pre>
+            <div class="code-block" id="code-fiddle">
+              <div class="fiddle-form">
+                <div class="form-group">
+                  <label for="fiddle-repo">Git Repository URL (GitHub/GitLab)</label>
+                  <input type="text" id="fiddle-repo" class="form-input" placeholder="https://github.com/nativebpm/wasmee" value="https://github.com/nativebpm/wasmee">
+                </div>
+                <div class="form-row">
+                  <div class="form-group col">
+                    <label for="fiddle-ref">Git Ref (Branch/Tag)</label>
+                    <input type="text" id="fiddle-ref" class="form-input" placeholder="main" value="main">
+                  </div>
+                  <div class="form-group col">
+                    <label for="fiddle-path">File Path (WASM or ZIP)</label>
+                    <input type="text" id="fiddle-path" class="form-input" placeholder="guest.wasm" value="guest/target/wasm32-wasip1/release/wasmee_guest.wasm">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="fiddle-token">Git Token (Optional)</label>
+                  <input type="password" id="fiddle-token" class="form-input" placeholder="github_pat_...">
+                </div>
+                <div class="form-row">
+                  <div class="form-group col">
+                    <label for="fiddle-gas">Max Gas (Fuel Limit)</label>
+                    <input type="number" id="fiddle-gas" class="form-input" placeholder="10000000" value="10000000">
+                  </div>
+                  <div class="form-group col">
+                    <label for="fiddle-memory">Max Memory limit (MB)</label>
+                    <input type="number" id="fiddle-memory" class="form-input" placeholder="32" value="32">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="fiddle-payload">Input State (JSON)</label>
+                  <textarea id="fiddle-payload" class="form-textarea" rows="3">{"order_total": 4500}</textarea>
+                </div>
+                <div class="fiddle-actions">
+                  <button type="button" id="btn-warmup" class="btn btn-secondary btn-sm">Pre-Warm (JIT)</button>
+                  <button type="button" id="btn-execute" class="btn btn-primary btn-sm">Run on Wasmee</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
