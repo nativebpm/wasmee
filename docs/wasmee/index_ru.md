@@ -8,3 +8,5 @@
 | [WASMEE-102](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-102/WASMEE-102.md) | Перевод рантайма в Stateless | Выполнено | Рефакторинг Wasmee с удалением глобального слоя персистентности RustStore для превращения в stateless-вычислитель. |
 | [WASMEE-103](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-103/WASMEE-103.md) | GitOps без пайплайнов (Вебхуки и Кэш) | Выполнено | Прямая интеграция с Git через вебхуки, кэширование компиляций и ручную синхронизацию в UI для работы без CI/CD. |
 | [WASMEE-104](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-104/WASMEE-104.md) | Раздел блога и документация производительности | Выполнено | Документирование компромисса между скоростью работы и сохранностью снимков состояния, а также создание раздела блога на сайте. |
+| [WASMEE-105](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-105/WASMEE-105.md) | Облачное развертывание и верификация скрипта установки | Выполнено | Создание переносимого скрипта установки, сборка бинарных файлов для различных платформ и верификация установки в чистых Docker-контейнерах. |
+
