@@ -1,6 +1,6 @@
 ---
 task: WASMEE-107
-status: In Progress
+status: Done
 summary: Document clear business advantages and integration benefits of Wasmee's durable WebAssembly architecture in the blog post.
 ---
 

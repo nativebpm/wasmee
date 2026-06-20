@@ -10,6 +10,6 @@
 | [WASMEE-104](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-104/WASMEE-104.md) | Раздел блога и документация производительности | Выполнено | Документирование компромисса между скоростью работы и сохранностью снимков состояния, а также создание раздела блога на сайте. |
 | [WASMEE-105](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-105/WASMEE-105.md) | Облачное развертывание и верификация скрипта установки | Выполнено | Создание переносимого скрипта установки, сборка бинарных файлов для различных платформ и верификация установки в чистых Docker-контейнерах. |
 | [WASMEE-106](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-106/WASMEE-106.md) | Запуск и верификация кода Fiddle через Git | В процессе | Сборка гостевого модуля WebAssembly, отправка его в Git-репозиторий и проверка запуска с помощью локального демона wasmee и Fiddle UI. |
-| [WASMEE-107](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-107/WASMEE-107.md) | Бизнес-выгоды и бенефиты интеграции в блоге | В процессе | Добавление понятных коммерческих и интеграционных преимуществ durable WebAssembly в статью блога. |
+| [WASMEE-107](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-107/WASMEE-107.md) | Бизнес-выгоды и бенефиты интеграции в блоге | Выполнено | Добавление понятных коммерческих и интеграционных преимуществ durable WebAssembly в статью блога. |
 
 
