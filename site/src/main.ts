@@ -163,6 +163,7 @@ if (btnWarmup) {
     const path = (document.getElementById('fiddle-path') as HTMLInputElement)?.value || '';
     const token = (document.getElementById('fiddle-token') as HTMLInputElement)?.value || '';
 
+    updateStatusIndicator('syncing');
     updateConsole([
       { type: 'info', msg: 'Initiating Git pre-warming...' },
       { type: 'info', msg: `Repository: ${repo}` },
@@ -193,17 +194,82 @@ if (btnWarmup) {
 
       const data = await response.json();
       if (data.success) {
+        updateStatusIndicator('warm');
         updateConsole([
           { type: 'success', msg: 'Pre-warming completed successfully!' },
           { type: 'value', msg: `Compiled Module Hash: ${data.wasm_hash}` }
         ]);
         localStorage.setItem('wasmee_last_hash', data.wasm_hash);
       } else {
+        updateStatusIndicator('error');
         updateConsole([
           { type: 'error', msg: `Pre-warming failed: ${data.error}` }
         ]);
       }
     } catch (e: any) {
+      updateStatusIndicator('error');
+      updateConsole([
+        { type: 'error', msg: `Connection error: ${e.message}` },
+        { type: 'warn', msg: 'Make sure Wasmee daemon is running locally on http://127.0.0.1:8081' }
+      ]);
+    }
+  });
+}
+
+const btnSync = document.getElementById('btn-sync');
+if (btnSync) {
+  btnSync.addEventListener('click', async () => {
+    const repo = (document.getElementById('fiddle-repo') as HTMLInputElement)?.value || '';
+    const ref = (document.getElementById('fiddle-ref') as HTMLInputElement)?.value || '';
+    const path = (document.getElementById('fiddle-path') as HTMLInputElement)?.value || '';
+    const token = (document.getElementById('fiddle-token') as HTMLInputElement)?.value || '';
+
+    updateStatusIndicator('syncing');
+    updateConsole([
+      { type: 'info', msg: 'Initiating manual GitOps synchronization...' },
+      { type: 'info', msg: `Repository: ${repo}` },
+      { type: 'info', msg: `Ref (branch/tag): ${ref}` },
+      { type: 'info', msg: `File path: ${path}` }
+    ]);
+
+    try {
+      const response = await fetch(`${WASMEE_URL}/gitops/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer test-bearer-token'
+        },
+        body: JSON.stringify({
+          git_source: {
+            repository: repo,
+            git_ref: ref,
+            file_path: path,
+            git_token: token
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        updateStatusIndicator('warm');
+        updateConsole([
+          { type: 'success', msg: 'GitOps synchronization completed successfully!' },
+          { type: 'value', msg: `Compiled Module Hash: ${data.wasm_hash}` },
+          { type: 'info', msg: 'JIT compilation cached. Ready to run on Wasmee.' }
+        ]);
+        localStorage.setItem('wasmee_last_hash', data.wasm_hash);
+      } else {
+        updateStatusIndicator('error');
+        updateConsole([
+          { type: 'error', msg: `GitOps sync failed: ${data.error}` }
+        ]);
+      }
+    } catch (e: any) {
+      updateStatusIndicator('error');
       updateConsole([
         { type: 'error', msg: `Connection error: ${e.message}` },
         { type: 'warn', msg: 'Make sure Wasmee daemon is running locally on http://127.0.0.1:8081' }
@@ -252,13 +318,13 @@ if (btnExecute) {
           base_snapshot: '',
           memory_deltas: {},
           oplog: [],
-          wasm_hash: savedHash, 
-          git_source: savedHash ? undefined : {
+          wasm_hash: repo ? '' : savedHash, 
+          git_source: repo ? {
             repository: repo,
             git_ref: ref,
             file_path: path,
             git_token: token
-          },
+          } : undefined,
           exchange_buffer: btoa(JSON.stringify(payloadJson)),
           sandbox_config: {
             max_fuel: gasVal,
@@ -340,3 +406,33 @@ function updateConsole(lines: { type: string, msg: string }[]) {
     outputConsole.appendChild(div);
   });
 }
+
+function updateStatusIndicator(status: 'stateless' | 'warm' | 'error' | 'syncing') {
+  const dot = document.querySelector('#cache-status-indicator .status-dot') as HTMLElement;
+  const text = document.querySelector('#cache-status-indicator .status-text') as HTMLElement;
+  if (!dot || !text) return;
+
+  switch (status) {
+    case 'stateless':
+      dot.style.backgroundColor = 'var(--text-muted)';
+      dot.style.boxShadow = 'none';
+      text.textContent = 'Stateless Mode';
+      break;
+    case 'warm':
+      dot.style.backgroundColor = 'var(--accent-green)';
+      dot.style.boxShadow = '0 0 8px var(--accent-green)';
+      text.textContent = 'JIT Cache: Warm';
+      break;
+    case 'error':
+      dot.style.backgroundColor = 'var(--accent-red)';
+      dot.style.boxShadow = '0 0 8px var(--accent-red)';
+      text.textContent = 'Sync Failed';
+      break;
+    case 'syncing':
+      dot.style.backgroundColor = 'var(--accent-yellow)';
+      dot.style.boxShadow = '0 0 8px var(--accent-yellow)';
+      text.textContent = 'Syncing...';
+      break;
+  }
+}
+

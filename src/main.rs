@@ -18,8 +18,24 @@ struct AppState {
     modules: RwLock<HashMap<String, Module>>,
     modules_order: Mutex<VecDeque<String>>,
     compiling: Mutex<HashMap<String, Arc<tokio::sync::Notify>>>,
+    git_cache: RwLock<HashMap<String, (pb::GitSource, String, Module)>>,
     api_token: String,
 }
+
+fn get_git_cache_key(src: &pb::GitSource) -> String {
+    let git_ref = if src.git_ref.is_empty() {
+        "main"
+    } else {
+        &src.git_ref
+    };
+    format!(
+        "{}:{}:{}",
+        src.repository.trim().trim_end_matches(".git").to_lowercase(),
+        git_ref,
+        src.file_path
+    )
+}
+
 
 impl AppState {
     async fn get_or_compile_module(&self, wasm_bytes: Vec<u8>) -> Result<(Module, String), String> {
@@ -131,6 +147,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         modules: RwLock::new(HashMap::new()),
         modules_order: Mutex::new(VecDeque::new()),
         compiling: Mutex::new(HashMap::new()),
+        git_cache: RwLock::new(HashMap::new()),
         api_token,
     });
 
@@ -142,6 +159,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .route("/execute", post(execute_handler))
         .route("/warmup", post(warmup_handler))
+        .route("/gitops/sync", post(warmup_handler))
+        .route("/git-webhook", post(git_webhook_handler))
         .layer(cors)
         .layer(axum::extract::DefaultBodyLimit::max(20 * 1024 * 1024))
         .with_state(state);
@@ -237,14 +256,28 @@ async fn execute_handler(
             Err(e) => ModuleResolveResult::Err(e),
         }
     } else if let Some(git_src) = payload.git_source {
-        match git_resolver::resolve_git_source(&git_src).await {
-            Ok(bytes) => {
-                match state.get_or_compile_module(bytes).await {
-                    Ok((m, _hash)) => ModuleResolveResult::Ok(m),
-                    Err(e) => ModuleResolveResult::Err(e),
+        let cache_key = get_git_cache_key(&git_src);
+        let cached_opt = {
+            let cache = state.git_cache.read().unwrap();
+            cache.get(&cache_key).cloned()
+        };
+        match cached_opt {
+            Some((_src, _hash, m)) => ModuleResolveResult::Ok(m),
+            None => {
+                match git_resolver::resolve_git_source(&git_src).await {
+                    Ok(bytes) => {
+                        match state.get_or_compile_module(bytes).await {
+                            Ok((m, hash)) => {
+                                let mut cache = state.git_cache.write().unwrap();
+                                cache.insert(cache_key, (git_src.clone(), hash, m.clone()));
+                                ModuleResolveResult::Ok(m)
+                            }
+                            Err(e) => ModuleResolveResult::Err(e),
+                        }
+                    }
+                    Err(e) => ModuleResolveResult::Err(format!("Git resolution failed: {}", e)),
                 }
             }
-            Err(e) => ModuleResolveResult::Err(format!("Git resolution failed: {}", e)),
         }
     } else if !payload.wasm_hash.is_empty() {
         let cached_module = {
@@ -444,7 +477,12 @@ async fn warmup_handler(
     match git_resolver::resolve_git_source(&git_src).await {
         Ok(bytes) => {
             match state.get_or_compile_module(bytes).await {
-                Ok((_module, hash)) => {
+                Ok((module, hash)) => {
+                    let cache_key = get_git_cache_key(&git_src);
+                    {
+                        let mut cache = state.git_cache.write().unwrap();
+                        cache.insert(cache_key, (git_src.clone(), hash.clone(), module));
+                    }
                     send_response(pb::WarmupResponse {
                         success: true,
                         wasm_hash: hash,
@@ -469,3 +507,155 @@ async fn warmup_handler(
         }
     }
 }
+
+fn parse_webhook_payload(body: &[u8]) -> Option<(String, String)> {
+    let json_val: serde_json::Value = serde_json::from_slice(body).ok()?;
+    let repo_url_opt = json_val
+        .get("repository")
+        .and_then(|r| r.get("html_url").or_else(|| r.get("homepage")).or_else(|| r.get("git_http_url")))
+        .and_then(|v| v.as_str())
+        .or_else(|| {
+            json_val
+                .get("project")
+                .and_then(|p| p.get("web_url").or_else(|| p.get("git_http_url")))
+                .and_then(|v| v.as_str())
+        });
+    let repo_url = repo_url_opt?.trim().trim_end_matches(".git").to_lowercase();
+    let ref_str = json_val
+        .get("ref")
+        .and_then(|r| r.as_str())
+        .unwrap_or("refs/heads/main");
+    let branch = if ref_str.starts_with("refs/heads/") {
+        &ref_str["refs/heads/".len()..]
+    } else if ref_str.starts_with("refs/tags/") {
+        &ref_str["refs/tags/".len()..]
+    } else {
+        ref_str
+    };
+    Some((repo_url, branch.to_string()))
+}
+
+async fn git_webhook_handler(
+    axum::extract::State(state): axum::extract::State<Arc<AppState>>,
+    body_bytes: axum::body::Bytes,
+) -> impl axum::response::IntoResponse {
+    let (repo_url, branch) = match parse_webhook_payload(&body_bytes) {
+        Some(res) => res,
+        None => {
+            return (
+                axum::http::StatusCode::BAD_REQUEST,
+                [("content-type", "application/json")],
+                "{\"success\": false, \"error\": \"Could not parse webhook payload or determine repository/ref\"}".to_string().into_bytes(),
+            ).into_response();
+        }
+    };
+
+    println!("Received Git webhook for repository: {} (ref: {})", repo_url, branch);
+
+    let mut matching_sources = Vec::new();
+    {
+        let cache = state.git_cache.read().unwrap();
+        for (_key, (git_src, _hash, _module)) in cache.iter() {
+            let src_repo = git_src.repository.trim().trim_end_matches(".git").to_lowercase();
+            let src_ref = if git_src.git_ref.is_empty() { "main" } else { &git_src.git_ref };
+            if src_repo == repo_url && src_ref == branch {
+                matching_sources.push(git_src.clone());
+            }
+        }
+    }
+
+    let count = matching_sources.len();
+    if count == 0 {
+        println!("No matching registered Git sources found in JIT cache for repository: {} (ref: {})", repo_url, branch);
+        return (
+            axum::http::StatusCode::OK,
+            [("content-type", "application/json")],
+            format!("{{\"success\": true, \"message\": \"No matching Git sources in cache\", \"updated_count\": 0}}").into_bytes(),
+        ).into_response();
+    }
+
+    let state_clone = state.clone();
+    tokio::spawn(async move {
+        for git_src in matching_sources {
+            println!("Hot-reloading Git source in background: {}:{}:{}", git_src.repository, git_src.git_ref, git_src.file_path);
+            match git_resolver::resolve_git_source(&git_src).await {
+                Ok(bytes) => {
+                    match state_clone.get_or_compile_module(bytes).await {
+                        Ok((module, hash)) => {
+                            let cache_key = get_git_cache_key(&git_src);
+                            {
+                                let mut cache = state_clone.git_cache.write().unwrap();
+                                cache.insert(cache_key, (git_src.clone(), hash.clone(), module));
+                            }
+                            println!("Successfully hot-reloaded and JIT-compiled Git source. New hash: {}", hash);
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to JIT-compile background hot-reloaded WASM: {}", e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Failed to fetch Git source for background hot-reload: {}", e);
+                }
+            }
+        }
+    });
+
+    (
+        axum::http::StatusCode::OK,
+        [("content-type", "application/json")],
+        format!("{{\"success\": true, \"message\": \"Triggered background hot-reload\", \"updated_count\": {}}}", count).into_bytes(),
+    ).into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_git_cache_key() {
+        let src1 = pb::GitSource {
+            repository: "https://github.com/nativebpm/wasmee.git".to_string(),
+            git_ref: "main".to_string(),
+            file_path: "guest.wasm".to_string(),
+            git_token: "".to_string(),
+        };
+        assert_eq!(get_git_cache_key(&src1), "https://github.com/nativebpm/wasmee:main:guest.wasm");
+
+        let src2 = pb::GitSource {
+            repository: "https://GitLab.com/user/Repo".to_string(),
+            git_ref: "".to_string(),
+            file_path: "app/dist.zip".to_string(),
+            git_token: "tok".to_string(),
+        };
+        assert_eq!(get_git_cache_key(&src2), "https://gitlab.com/user/repo:main:app/dist.zip");
+    }
+
+    #[test]
+    fn test_parse_webhook_payload_github() {
+        let payload = r#"{
+            "ref": "refs/heads/main",
+            "repository": {
+                "html_url": "https://github.com/nativebpm/wasmee"
+            }
+        }"#;
+        let (repo, branch) = parse_webhook_payload(payload.as_bytes()).unwrap();
+        assert_eq!(repo, "https://github.com/nativebpm/wasmee");
+        assert_eq!(branch, "main");
+    }
+
+    #[test]
+    fn test_parse_webhook_payload_gitlab() {
+        let payload = r#"{
+            "ref": "refs/heads/test-branch",
+            "repository": {
+                "homepage": "https://gitlab.com/nativebpm/wasmee.git"
+            }
+        }"#;
+        let (repo, branch) = parse_webhook_payload(payload.as_bytes()).unwrap();
+        assert_eq!(repo, "https://gitlab.com/nativebpm/wasmee");
+        assert_eq!(branch, "test-branch");
+    }
+}
+
+
