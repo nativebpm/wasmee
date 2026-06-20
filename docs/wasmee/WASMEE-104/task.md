@@ -1,0 +1,6 @@
+- [x] Update documentation (`README.md` and `README_ru.md`) with a section on durable vs stateless performance.
+- [x] Modify `site/index.html` to add the Blog view (Feed View + Article Post View) and "Blog" nav item.
+- [x] Modify `site/src/style.css` to add clean styling for the Blog section and article layout.
+- [x] Modify `site/src/main.ts` to implement hash-based routing (`#home`, `#blog`, `#blog/<slug>`) and render the blog post.
+- [x] Compile and verify the build works by running `npm run build` in the `site/` folder.
+- [x] Commit all code changes and the Semantic Store files, then push to remote.

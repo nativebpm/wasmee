@@ -436,3 +436,166 @@ function updateStatusIndicator(status: 'stateless' | 'warm' | 'error' | 'syncing
   }
 }
 
+// Blog Section & Hash Routing Implementation
+interface BlogPost {
+  slug: string;
+  title: string;
+  category: string;
+  date: string;
+  author: string;
+  excerpt: string;
+  content: string;
+}
+
+const blogPosts: BlogPost[] = [
+  {
+    slug: 'understanding-durable-wasm-performance',
+    title: 'Анатомия производительности Durable WebAssembly: Почему 25 000 RPS — это впечатляющий результат?',
+    category: 'Performance & Architecture',
+    date: '21 июня 2026 г.',
+    author: 'Wasmee Core Team',
+    excerpt: 'Разбор архитектуры Wasmee: как работают песочницы, восстановление памяти из слепков (snapshots) и расчёт разницы измененных страниц (dirty pages), и почему 25k RPS — выдающийся показатель.',
+    content: `
+      <p>Когда речь заходит о производительности WebAssembly, многие разработчики ориентируются на чистые бенчмарки Wasmtime или V8, которые демонстрируют сотни тысяч и даже миллионы вызовов функций в секунду. В то же время на главной странице Wasmee указана цифра в <strong>25 000+ In-Memory RPS</strong>. Почему показатели отличаются в разы и почему для Durable-подхода это выдающийся результат?</p>
+
+      <h2>Как устроен чистый (Stateless) рантайм WebAssembly?</h2>
+      <p>В стандартном сценарии Wasmtime удерживает скомпилированный инстанс модуля в оперативной памяти хост-процесса. Когда приходит вызов, хост выполняет прямой переход к инструкциям Wasm. Накладные расходы такого вызова составляют наносекунды. Это идеальное решение для вычислений без состояния (Stateless), таких как обработка изображений или парсинг данных. Однако в таком рантайме нет механизмов отказоустойчивости: если хост упадёт в процессе выполнения задачи, её состояние будет безвозвратно утеряно.</p>
+
+      <h2>Что делает Wasmee при каждом вызове для обеспечения Durability?</h2>
+      <p>Wasmee спроектирован для запуска <strong>Durable Micro-Tasks (отказоустойчивых бизнес-сценариев)</strong>. Чтобы гарантировать абсолютную изоляцию и возможность продолжить выполнение с любого шага при аппаратном сбое, Wasmee при каждом входящем запросе проходит через полноценный жизненный цикл:</p>
+
+      <blockquote style="border-left: 4px solid var(--accent-purple); padding-left: 1.5rem; margin: 1.75rem 0; font-style: italic; background: rgba(139, 92, 246, 0.03); padding-top: 0.5rem; padding-bottom: 0.5rem;">
+        <strong>Жизненный цикл транзакции в Wasmee:</strong><br>
+        Инициализация Store &rarr; Инстанцирование модуля &rarr; Восстановление слепка памяти (Restore Snapshot) &rarr; Вызов гостевой функции &rarr; Сканирование грязных страниц (Dirty Pages) &rarr; Генерация дельт состояния.
+      </blockquote>
+
+      <h3>1. Полная изоляция песочницы (Sandboxing)</h3>
+      <p>Для предотвращения утечек памяти и состояния между транзакциями разных пользователей Wasmee создает новые объекты <code>Linker</code>, <code>Store</code> (с лимитами на потребление топлива/памяти) и заново инстанцирует Wasm-модуль на каждый вызов.</p>
+
+      <h3>2. Восстановление состояния памяти из слепка</h3>
+      <p>Перед запуском гостевого кода Wasmee считывает базовый снимок состояния памяти модуля (base snapshot) и накладывает на него накопленные изменения (memory deltas). Получившийся массив байт записывается в память нового инстанса. Это восстанавливает состояние Wasm-модуля ровно в ту точку, на которой он остановился.</p>
+
+      <h3>3. Запись инпута и прямой вызов</h3>
+      <p>Входные параметры копируются напрямую в линейную память инстанса через shared-буфер (<code>EXCHANGE_BUFFER</code>). Это избавляет от необходимости кодирования и декодирования JSON или Base64 на лету.</p>
+
+      <h3>4. Хеширование страниц и поиск дельт (Dirty-Page Tracking)</h3>
+      <p>После вызова функции Wasmee должен выявить только изменившиеся фрагменты памяти, чтобы не сохранять гигабайты дублирующихся данных. Wasmee считывает память инстанса, разбивает её на страницы размером по <strong>64 КБ</strong> и вычисляет хеш для каждой страницы. Те страницы, чьи хеши не совпали с исходными, упаковываются в <code>memory_deltas</code> для сохранения в БД.</p>
+
+      <h2>Почему 25 000+ RPS — это очень быстро?</h2>
+      <p>Весь этот сложнейший цикл инициализации, восстановления, копирования, выполнения и постраничного дифференциального сравнения занимает всего <strong>менее 40 микросекунд (Warm Resume Latency &lt; 40 µs)</strong> на одну транзакцию!</p>
+      <p>В переводе на пропускную способность одного CPU ядра это даёт около 25 000 RPS. Для сравнения, традиционные Docker-контейнеры требуют миллисекунды на запуск и перезапуск состояния. Wasmee делает это в тысячи раз быстрее, приближаясь по скорости к нативному коду, но предоставляя 100% гарантию сохранности состояния.</p>
+
+      <h2>Заключение: микрооптимизации больше не нужны</h2>
+      <p>Дальнейшее выжимание микросекунд из рантайма — например, усложнение алгоритма отслеживания памяти на уровне виртуальной памяти ОС (через обработку page faults) — приведёт к усложнению кодовой базы и снижению стабильности ради минимального прироста скорости.</p>
+      <p>Текущие 25k RPS на ядро с лихвой покрывают требования самых высоконагруженных распределенных систем. На данном этапе архитектура Wasmee достигла оптимального баланса между скоростью работы и надёжностью выполнения, поэтому команда разработки фокусируется на расширении возможностей SDK и безопасности песочницы.</p>
+    `
+  }
+];
+
+const homeView = document.getElementById('home-view');
+const blogView = document.getElementById('blog-view');
+const blogFeedView = document.getElementById('blog-feed-view');
+const blogPostView = document.getElementById('blog-post-view');
+const blogPostsList = document.getElementById('blog-posts-list');
+const navBlog = document.getElementById('nav-blog');
+
+function router() {
+  const hash = window.location.hash || '#home';
+  
+  // Update nav item active states
+  document.querySelectorAll('.nav-menu .nav-item').forEach(link => {
+    link.classList.remove('active');
+  });
+  
+  if (hash === '#home' || hash.startsWith('#features') || hash.startsWith('#benchmarks') || hash.startsWith('#code') || hash.startsWith('#get-started')) {
+    if (homeView) homeView.style.display = 'block';
+    if (blogView) blogView.style.display = 'none';
+    
+    // Auto scroll to elements if hash contains anchor
+    if (hash.startsWith('#') && hash !== '#home') {
+      const targetEl = document.querySelector(hash);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  } else if (hash === '#blog') {
+    if (homeView) homeView.style.display = 'none';
+    if (blogView) {
+      blogView.style.display = 'block';
+    }
+    if (blogFeedView) blogFeedView.style.display = 'block';
+    if (blogPostView) blogPostView.style.display = 'none';
+    if (navBlog) navBlog.classList.add('active');
+    
+    renderBlogFeed();
+    window.scrollTo({ top: 0, behavior: 'instant' as any });
+  } else if (hash.startsWith('#blog/')) {
+    const slug = hash.replace('#blog/', '');
+    const post = blogPosts.find(p => p.slug === slug);
+    if (post) {
+      if (homeView) homeView.style.display = 'none';
+      if (blogView) {
+        blogView.style.display = 'block';
+      }
+      if (blogFeedView) blogFeedView.style.display = 'none';
+      if (blogPostView) blogPostView.style.display = 'block';
+      if (navBlog) navBlog.classList.add('active');
+      
+      const titleEl = document.getElementById('article-title');
+      const dateEl = document.getElementById('article-date');
+      const authorEl = document.getElementById('article-author');
+      const bodyEl = document.getElementById('article-body');
+      
+      if (titleEl) titleEl.textContent = post.title;
+      if (dateEl) dateEl.textContent = post.date;
+      if (authorEl) authorEl.textContent = post.author;
+      if (bodyEl) bodyEl.innerHTML = post.content;
+      
+      window.scrollTo({ top: 0, behavior: 'instant' as any });
+    } else {
+      window.location.hash = '#blog';
+    }
+  }
+}
+
+function renderBlogFeed() {
+  if (!blogPostsList) return;
+  blogPostsList.innerHTML = '';
+  
+  blogPosts.forEach(post => {
+    const card = document.createElement('div');
+    card.className = 'blog-card';
+    card.innerHTML = `
+      <div>
+        <span class="blog-card-tag">${post.category}</span>
+        <h3 class="blog-card-title">${post.title}</h3>
+        <p class="blog-card-excerpt">${post.excerpt}</p>
+      </div>
+      <div class="blog-card-footer">
+        <span>${post.date}</span>
+        <span class="blog-card-more">
+          Читать статью
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </span>
+      </div>
+    `;
+    card.addEventListener('click', () => {
+      window.location.hash = `#blog/${post.slug}`;
+    });
+    blogPostsList.appendChild(card);
+  });
+}
+
+// Bind navigation routes
+window.addEventListener('hashchange', router);
+window.addEventListener('load', router);
+
+// Trigger initial router execution on script load
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  router();
+}
+
+

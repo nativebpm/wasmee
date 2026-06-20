@@ -1,6 +1,6 @@
 ---
 task: WASMEE-104
-status: In Progress
+status: Done
 summary: Document the snapshot recovery vs execution speed trade-off and add a beautiful Blog section to the website.
 ---
 
