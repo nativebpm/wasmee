@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package wasmee;
 
-option go_package = "github.com/nativebpm/connectors/wasmee/pb";
+option go_package = "github.com/nativebpm/wasmee/pb";
 
 message OplogEntry {
   int32 call_index = 1;
