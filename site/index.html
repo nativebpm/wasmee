@@ -358,8 +358,8 @@ func main() {}</code></pre>
                   </div>
                 </div>
                 <div class="form-group">
-                  <label for="fiddle-payload">Input State (JSON)</label>
-                  <textarea id="fiddle-payload" class="form-textarea" rows="3">{"order_total": 4500}</textarea>
+                  <label>Input State (JSON)</label>
+                  <div id="fiddle-payload-editor" style="height: 120px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-light); font-family: monospace;"></div>
                 </div>
                 <div class="fiddle-actions">
                   <button type="button" id="btn-warmup" class="btn btn-secondary btn-sm">Pre-Warm (JIT)</button>
@@ -413,6 +413,8 @@ func main() {}</code></pre>
     </div>
   </footer>
 
+  <!-- Monaco Editor CDN loader -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
   <!-- Script bundle -->
   <script type="module" src="./src/main.ts"></script>
 </body>

@@ -121,6 +121,35 @@ langBtns.forEach(btn => {
 });
 
 // Live Fiddle API Integration
+declare var require: any;
+declare var monaco: any;
+
+let payloadEditor: any = null;
+
+if (typeof require !== 'undefined') {
+  require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs' } });
+  require(['vs/editor/editor.main'], function () {
+    const container = document.getElementById('fiddle-payload-editor');
+    if (container) {
+      payloadEditor = monaco.editor.create(container, {
+        value: JSON.stringify({ order_total: 4500 }, null, 2),
+        language: 'json',
+        theme: 'vs-dark',
+        minimap: { enabled: false },
+        automaticLayout: true,
+        scrollBeyondLastLine: false,
+        lineNumbers: 'off',
+        glyphMargin: false,
+        folding: false,
+        scrollbar: {
+          vertical: 'hidden',
+          horizontal: 'hidden'
+        }
+      });
+    }
+  });
+}
+
 const btnWarmup = document.getElementById('btn-warmup');
 const btnExecute = document.getElementById('btn-execute');
 const outputConsole = document.querySelector('.code-output-panel .output-body');
@@ -189,7 +218,7 @@ if (btnExecute) {
     const ref = (document.getElementById('fiddle-ref') as HTMLInputElement)?.value || '';
     const path = (document.getElementById('fiddle-path') as HTMLInputElement)?.value || '';
     const token = (document.getElementById('fiddle-token') as HTMLInputElement)?.value || '';
-    const payloadStr = (document.getElementById('fiddle-payload') as HTMLTextAreaElement)?.value || '{}';
+    const payloadStr = payloadEditor ? payloadEditor.getValue() : '{}';
     const gasVal = parseInt((document.getElementById('fiddle-gas') as HTMLInputElement)?.value || '10000000', 10);
     const memVal = parseInt((document.getElementById('fiddle-memory') as HTMLInputElement)?.value || '32', 10);
 
