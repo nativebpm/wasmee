@@ -48,9 +48,14 @@ pub async fn resolve_git_source(source: &GitSource) -> Result<Vec<u8>, String> {
         .map_err(|e| format!("Failed to read response bytes: {}", e))?
         .to_vec();
 
-    // Check if the downloaded file is a ZIP archive
+    // Check compression format
     let is_zip = source.file_path.ends_with(".zip") || 
                  (bytes.len() >= 4 && &bytes[0..4] == b"PK\x03\x04");
+    let is_gzip = source.file_path.ends_with(".gz") || 
+                  source.file_path.ends_with(".gzip") || 
+                  (bytes.len() >= 2 && &bytes[0..2] == b"\x1f\x8b");
+    let is_brotli = source.file_path.ends_with(".br") || 
+                    source.file_path.ends_with(".brotli");
 
     if is_zip {
         let cursor = Cursor::new(bytes);
@@ -72,6 +77,20 @@ pub async fn resolve_git_source(source: &GitSource) -> Result<Vec<u8>, String> {
         }
 
         wasm_bytes.ok_or_else(|| "No .wasm file found inside the ZIP archive".to_string())
+    } else if is_gzip {
+        use std::io::Read;
+        let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
+        let mut decoded = Vec::new();
+        decoder.read_to_end(&mut decoded)
+            .map_err(|e| format!("Failed to decompress Gzip: {}", e))?;
+        Ok(decoded)
+    } else if is_brotli {
+        use std::io::Read;
+        let mut decompressor = brotli::Decompressor::new(&bytes[..], 4096);
+        let mut decompressed = Vec::new();
+        decompressor.read_to_end(&mut decompressed)
+            .map_err(|e| format!("Failed to decompress Brotli: {}", e))?;
+        Ok(decompressed)
     } else {
         Ok(bytes)
     }
@@ -157,5 +176,46 @@ mod tests {
 
         let extracted = wasm_bytes.unwrap();
         assert_eq!(extracted, b"\x00asm\x01\x00\x00\x00dummy_wasm_code");
+    }
+
+    #[test]
+    fn test_gzip_decompression() {
+        use std::io::Write;
+        use flate2::write::GzEncoder;
+        use flate2::Compression;
+
+        let original_data = b"\x00asm\x01\x00\x00\x00gzip_dummy_data";
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(original_data).unwrap();
+        let compressed_bytes = encoder.finish().unwrap();
+
+        let is_gzip = compressed_bytes.len() >= 2 && &compressed_bytes[0..2] == b"\x1f\x8b";
+        assert!(is_gzip);
+
+        use std::io::Read;
+        let mut decoder = flate2::read::GzDecoder::new(&compressed_bytes[..]);
+        let mut decoded = Vec::new();
+        decoder.read_to_end(&mut decoded).unwrap();
+
+        assert_eq!(decoded, original_data);
+    }
+
+    #[test]
+    fn test_brotli_decompression() {
+        use std::io::Write;
+
+        let original_data = b"\x00asm\x01\x00\x00\x00brotli_dummy_data";
+        let mut compressed_bytes = Vec::new();
+        {
+            let mut writer = brotli::CompressorWriter::new(&mut compressed_bytes, 4096, 5, 20);
+            writer.write_all(original_data).unwrap();
+        }
+
+        use std::io::Read;
+        let mut decompressor = brotli::Decompressor::new(&compressed_bytes[..], 4096);
+        let mut decompressed = Vec::new();
+        decompressor.read_to_end(&mut decompressed).unwrap();
+
+        assert_eq!(decompressed, original_data);
     }
 }
