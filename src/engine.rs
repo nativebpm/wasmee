@@ -338,7 +338,7 @@ pub fn run_wasm_precompiled(
                 format!("resp_for_{}_call_{}", String::from_utf8_lossy(&request), call_idx).into_bytes()
             }
             _ => {
-                format!("resp_for_{}", api_name).into_bytes()
+                return -3;
             }
         };
 
@@ -399,6 +399,22 @@ pub fn run_wasm_precompiled(
             response_bytes: vec![],
         },
     };
+
+    // If fresh run, invoke WASI start to initialize Go/TinyGo runtime (allocators, GC, etc.)
+    if base_snapshot.is_empty() {
+        if let Some(start_func) = instance.get_func(&mut store_obj, "_start") {
+            if let Err(e) = start_func.call(&mut store_obj, &[], &mut []) {
+                return RunResult {
+                    final_oplog: store_obj.data().oplog.clone(),
+                    final_deltas: HashMap::new(),
+                    checkpoints: vec![],
+                    crashed: true,
+                    error: format!("Failed to initialize runtime via _start: {}", e),
+                    response_bytes: vec![],
+                };
+            }
+        }
+    }
 
     // Restore memory snapshot in VM
     if !restored_mem.is_empty() {
