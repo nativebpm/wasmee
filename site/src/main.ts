@@ -448,110 +448,114 @@ interface BlogPost {
   excerpt: string;
   content: string;
 }
-const blogPosts: BlogPost[] = [
-  {
-    slug: 'understanding-durable-wasm-performance-ru',
-    title: 'Анатомия производительности Durable WebAssembly: Почему 25 000 RPS — это впечатляющий результат?',
-    category: 'Performance & Architecture',
-    date: '21 июня 2026 г.',
-    author: 'Wasmee Core Team',
-    excerpt: 'Разбор архитектуры Wasmee: как работают песочницы, восстановление памяти из слепков (snapshots) и расчёт разницы измененных страниц (dirty pages), и почему 25k RPS — выдающийся показатель.',
-    content: `
-      <p>Когда речь заходит о производительности WebAssembly, многие разработчики ориентируются на чистые бенчмарки Wasmtime или V8, которые демонстрируют сотни тысяч и даже миллионы вызовов функций в секунду. В то же время на главной странице Wasmee указана цифра в <strong>25 000+ In-Memory RPS</strong>. Почему показатели отличаются в разы и почему для Durable-подхода это выдающийся результат?</p>
+const blogPosts: Record<'en' | 'ru', BlogPost[]> = {
+  ru: [
+    {
+      slug: 'understanding-durable-wasm-performance',
+      title: 'Анатомия производительности Durable WebAssembly: Почему 25 000 RPS — это впечатляющий результат?',
+      category: 'Performance & Architecture',
+      date: '21 июня 2026 г.',
+      author: 'Wasmee Core Team',
+      excerpt: 'Разбор архитектуры Wasmee: как работают песочницы, восстановление памяти из слепков (snapshots) и расчёт разницы измененных страниц (dirty pages), и почему 25k RPS — выдающийся показатель.',
+      content: `
+        <p>Когда речь заходит о производительности WebAssembly, многие разработчики ориентируются на чистые бенчмарки Wasmtime или V8, которые демонстрируют сотни тысяч и даже миллионы вызовов функций в секунду. В то же время на главной странице Wasmee указана цифра в <strong>25 000+ In-Memory RPS</strong>. Почему показатели отличаются в разы и почему для Durable-подхода это выдающийся результат?</p>
 
-      <h2>Как устроен чистый (Stateless) рантайм WebAssembly?</h2>
-      <p>В стандартном сценарии Wasmtime удерживает скомпилированный инстанс модуля в оперативной памяти хост-процесса. Когда приходит вызов, хост выполняет прямой переход к инструкциям Wasm. Накладные расходы такого вызова составляют наносекунды. Это идеальное решение для вычислений без состояния (Stateless), таких как обработка изображений или парсинг данных. Однако в таком рантайме нет механизмов отказоустойчивости: если хост упадёт в процессе выполнения задачи, её состояние будет безвозвратно утеряно.</p>
+        <h2>Как устроен чистый (Stateless) рантайм WebAssembly?</h2>
+        <p>В стандартном сценарии Wasmtime удерживает скомпилированный инстанс модуля в оперативной памяти хост-процесса. Когда приходит вызов, хост выполняет прямой переход к инструкциям Wasm. Накладные расходы такого вызова составляют наносекунды. Это идеальное решение для вычислений без состояния (Stateless), таких как обработка изображений или парсинг данных. Однако в таком рантайме нет механизмов отказоустойчивости: если хост упадёт в процессе выполнения задачи, её состояние будет безвозвратно утеряно.</p>
 
-      <h2>Что делает Wasmee при каждом вызове для обеспечения Durability?</h2>
-      <p>Wasmee спроектирован для запуска <strong>Durable Micro-Tasks (отказоустойчивых бизнес-сценариев)</strong>. Чтобы гарантировать абсолютную изоляцию и возможность продолжить выполнение с любого шага при аппаратном сбое, Wasmee при каждом входящем запросе проходит через полноценный жизненный цикл:</p>
+        <h2>Что делает Wasmee при каждом вызове для обеспечения Durability?</h2>
+        <p>Wasmee спроектирован для запуска <strong>Durable Micro-Tasks (отказоустойчивых бизнес-сценариев)</strong>. Чтобы гарантировать абсолютную изоляцию и возможность продолжить выполнение с любого шага при аппаратном сбое, Wasmee при каждом входящем запросе проходит через полноценный жизненный цикл:</p>
 
-      <blockquote style="border-left: 4px solid var(--accent-purple); padding-left: 1.5rem; margin: 1.75rem 0; font-style: italic; background: rgba(139, 92, 246, 0.03); padding-top: 0.5rem; padding-bottom: 0.5rem;">
-        <strong>Жизненный цикл транзакции в Wasmee:</strong><br>
-        Инициализация Store &rarr; Инстанцирование модуля &rarr; Восстановление слепка памяти (Restore Snapshot) &rarr; Вызов гостевой функции &rarr; Сканирование грязных страниц (Dirty Pages) &rarr; Генерация дельт состояния.
-      </blockquote>
+        <blockquote style="border-left: 4px solid var(--accent-purple); padding-left: 1.5rem; margin: 1.75rem 0; font-style: italic; background: rgba(139, 92, 246, 0.03); padding-top: 0.5rem; padding-bottom: 0.5rem;">
+          <strong>Жизненный цикл транзакции в Wasmee:</strong><br>
+          Инициализация Store &rarr; Инстанцирование модуля &rarr; Восстановление слепка памяти (Restore Snapshot) &rarr; Вызов гостевой функции &rarr; Сканирование грязных страниц (Dirty Pages) &rarr; Генерация дельт состояния.
+        </blockquote>
 
-      <h3>1. Полная изоляция песочницы (Sandboxing)</h3>
-      <p>Для предотвращения утечек памяти и состояния между транзакциями разных пользователей Wasmee создает новые объекты <code>Linker</code>, <code>Store</code> (с лимитами на потребление топлива/памяти) и заново инстанцирует Wasm-модуль на каждый вызов.</p>
+        <h3>1. Полная изоляция песочницы (Sandboxing)</h3>
+        <p>Для предотвращения утечек памяти и состояния между транзакциями разных пользователей Wasmee создает новые объекты <code>Linker</code>, <code>Store</code> (с лимитами на потребление топлива/памяти) и заново инстанцирует Wasm-модуль на каждый вызов.</p>
 
-      <h3>2. Восстановление состояния памяти из слепка</h3>
-      <p>Перед запуском гостевого кода Wasmee считывает базовый снимок состояния памяти модуля (base snapshot) и накладывает на него накопленные изменения (memory deltas). Получившийся массив байт записывается в память нового инстанса. Это восстанавливает состояние Wasm-модуля ровно в ту точку, на которой он остановился.</p>
+        <h3>2. Восстановление состояния памяти из слепка</h3>
+        <p>Перед запуском гостевого кода Wasmee считывает базовый снимок состояния памяти модуля (base snapshot) и накладывает на него накопленные изменения (memory deltas). Получившийся массив байт записывается в память нового инстанса. Это восстанавливает состояние Wasm-модуля ровно в ту точку, на которой он остановился.</p>
 
-      <h3>3. Запись инпута и прямой вызов</h3>
-      <p>Входные параметры копируются напрямую в линейную память инстанса через shared-буфер (<code>EXCHANGE_BUFFER</code>). Это избавляет от необходимости кодирования и декодирования JSON или Base64 на лету.</p>
+        <h3>3. Запись инпута и прямой вызов</h3>
+        <p>Входные параметры копируются напрямую в линейную память инстанса через shared-буфер (<code>EXCHANGE_BUFFER</code>). Это избавляет от необходимости кодирования и декодирования JSON или Base64 на лету.</p>
 
-      <h3>4. Хеширование страниц и поиск дельт (Dirty-Page Tracking)</h3>
-      <p>После вызова функции Wasmee должен выявить только изменившиеся фрагменты памяти, чтобы не сохранять гигабайты дублирующихся данных. Wasmee считывает память инстанса, разбивает её на страницы размером по <strong>64 КБ</strong> и вычисляет хеш для каждой страницы. Те страницы, чьи хеши не совпали с исходными, упаковываются в <code>memory_deltas</code> для сохранения в БД.</p>
+        <h3>4. Хеширование страниц и поиск дельт (Dirty-Page Tracking)</h3>
+        <p>После вызова функции Wasmee должен выявить только изменившиеся фрагменты памяти, чтобы не сохранять гигабайты дублирующихся данных. Wasmee считывает память инстанса, разбивает её на страницы размером по <strong>64 КБ</strong> и вычисляет хеш для каждой страницы. Те страницы, чьи хеши не совпали с исходными, упаковываются в <code>memory_deltas</code> для сохранения в БД.</p>
 
-      <h2>Почему 25 000+ RPS — это очень быстро?</h2>
-      <p>Весь этот сложнейший цикл инициализации, восстановления, копирования, выполнения и постраничного дифференциального сравнения занимает всего <strong>менее 40 микросекунд (Warm Resume Latency &lt; 40 µs)</strong> на одну транзакцию!</p>
-      <p>В переводе на пропускную способность одного CPU ядра это даёт около 25 000 RPS. Для сравнения, традиционные Docker-контейнеры требуют миллисекунды на запуск и перезапуск состояния. Wasmee делает это в тысячи раз быстрее, приближаясь по скорости к нативному коду, но предоставляя 100% гарантию сохранности состояния.</p>
+        <h2>Почему 25 000+ RPS — это очень быстро?</h2>
+        <p>Весь этот сложнейший цикл инициализации, восстановления, копирования, выполнения и постраничного дифференциального сравнения занимает всего <strong>менее 40 микросекунд (Warm Resume Latency &lt; 40 µs)</strong> на одну транзакцию!</p>
+        <p>В переводе на пропускную способность одного CPU ядра это даёт около 25 000 RPS. Для сравнения, традиционные Docker-контейнеры требуют миллисекунды на запуск и перезапуск состояния. Wasmee делает это в тысячи раз быстрее, приближаясь по скорости к нативному коду, но предоставляя 100% гарантию сохранности состояния.</p>
 
-      <h2>Что это значит для бизнеса и интеграции? (Главные выводы)</h2>
-      <p>Архитектура Wasmee с производительностью 25 000 RPS дает конкретные коммерческие и технические преимущества системам, которые с ней интегрируются:</p>
-      <ul>
-        <li><strong>Сверхвысокая плотность и экономия на инфраструктуре (до 10 раз)</strong>: Вместо запуска тяжелых Docker-контейнеров для каждого пользовательского сценария (которые требуют от 100 МБ ОЗУ и запускаются миллисекунды) Wasmee запускает изолированные песочницы внутри одного процесса. Каждая задача потребляет всего около 4.2 МБ ОЗУ и стартует за микросекунды. Это позволяет обслуживать в 10 раз больше клиентов на том же оборудовании, колоссально снижая счета за облака.</li>
-        <li><strong>Отказоустойчивость «из коробки» (Fault Tolerance)</strong>: Разработчикам больше не нужно вручную программировать сложную логику повторных попыток (retries), сохранять промежуточные состояния в базу данных при сбоях или проектировать распределенные транзакции. Если сервер аварийно завершит работу, Wasmee автоматически продолжит выполнение с точностью до последней выполненной инструкции из сохраненного слепка памяти.</li>
-        <li><strong>Безопасное исполнение стороннего кода (Plugin Systems)</strong>: Если вы создаете платформу, где сторонние разработчики могут загружать свои скрипты или плагины, Wasmee гарантирует абсолютную безопасность. Гостевой код выполняется в изолированной WebAssembly-песочнице с жесткими лимитами по памяти и CPU, без доступа к вашей файловой системе или сети.</li>
-        <li><strong>Простая и быстрая интеграция</strong>: Взаимодействие хост-системы с Wasmee происходит через высокоэффективный бинарный протокол Protobuf и общую память (shared-буфер <code>EXCHANGE_BUFFER</code>). Это полностью убирает накладные расходы на сериализацию (JSON/Base64) и избавляет от необходимости проектировать сложные шины данных для синхронизации состояний.</li>
-      </ul>
+        <h2>Что это значит для бизнеса и интеграции? (Главные выводы)</h2>
+        <p>Архитектура Wasmee с производительностью 25 000 RPS дает конкретные коммерческие и технические преимущества системам, которые с ней интегрируются:</p>
+        <ul>
+          <li><strong>Сверхвысокая плотность и экономия на инфраструктуре (до 10 раз)</strong>: Вместо запуска тяжелых Docker-контейнеров для каждого пользовательского сценария (которые требуют от 100 МБ ОЗУ и запускаются миллисекунды) Wasmee запускает изолированные песочницы внутри одного процесса. Каждая задача потребляет всего около 4.2 МБ ОЗУ и стартует за микросекунды. Это позволяет обслуживать в 10 раз больше клиентов на том же оборудовании, колоссально снижая счета за облака.</li>
+          <li><strong>Отказоустойчивость «из коробки» (Fault Tolerance)</strong>: Разработчикам больше не нужно вручную программировать сложную логику повторных попыток (retries), сохранять промежуточные состояния в базу данных при сбоях или проектировать распределенные транзакции. Если сервер аварийно завершит работу, Wasmee автоматически продолжит выполнение с точностью до последней выполненной инструкции из сохраненного слепка памяти.</li>
+          <li><strong>Безопасное исполнение стороннего кода (Plugin Systems)</strong>: Если вы создаете платформу, где сторонние разработчики могут загружать свои скрипты или плагины, Wasmee гарантирует абсолютную безопасность. Гостевой код выполняется в изолированной WebAssembly-песочнице с жесткими лимитами по памяти и CPU, без доступа к вашей файловой системе или сети.</li>
+          <li><strong>Простая и быстрая интеграция</strong>: Взаимодействие хост-системы с Wasmee происходит через высокоэффективный бинарный протокол Protobuf и общую память (shared-буфер <code>EXCHANGE_BUFFER</code>). Это полностью убирает накладные расходы на сериализацию (JSON/Base64) и избавляет от необходимости проектировать сложные шины данных для синхронизации состояний.</li>
+        </ul>
 
-      <h2>Заключение: микрооптимизации больше не нужны</h2>
-      <p>Дальнейшее выжимание микросекунд из рантайма — например, усложнение алгоритма отслеживания памяти на уровне виртуальной памяти ОС (через обработку page faults) — приведёт к усложнению кодовой базы и снижению стабильности ради минимального прироста скорости.</p>
-      <p>Текущие 25k RPS на ядро с лихвой покрывают требования самых высоконагруженных распределенных систем. На данном этапе архитектура Wasmee достигла оптимального баланса между скоростью работы и надёжностью выполнения, поэтому команда разработки фокусируется на расширении возможностей SDK и безопасности песочницы.</p>
-    `
-  },
-  {
-    slug: 'understanding-durable-wasm-performance-en',
-    title: 'Anatomy of Durable WebAssembly Performance: Why 25,000 RPS is an Outstanding Result',
-    category: 'Performance & Architecture',
-    date: 'June 21, 2026',
-    author: 'Wasmee Core Team',
-    excerpt: 'A deep dive into Wasmee\'s architecture: how sandboxed isolation, state restoration from checkpoints, and dirty-page tracking work, and why 25k RPS is a major milestone for fault-tolerant compute.',
-    content: `
-      <p>When discussing WebAssembly performance, developers often point to raw Wasmtime or V8 benchmarks demonstrating hundreds of thousands or even millions of function calls per second. Meanwhile, Wasmee showcases <strong>25,000+ In-Memory RPS</strong>. Why is there a difference, and why is this throughput actually outstanding for a durable execution model?</p>
+        <h2>Заключение: микрооптимизации больше не нужны</h2>
+        <p>Дальнейшее выжимание микросекунд из рантайма — например, усложнение алгоритма отслеживания памяти на уровне виртуальной памяти ОС (через обработку page faults) — приведёт к усложнению кодовой базы и снижению стабильности ради минимального прироста скорости.</p>
+        <p>Текущие 25k RPS на ядро с лихвой покрывают требования самых высоконагруженных распределенных систем. На данном этапе архитектура Wasmee достигла оптимального баланса между скоростью работы и надёжностью выполнения, поэтому команда разработки фокусируется на расширении возможностей SDK и безопасности песочницы.</p>
+      `
+    }
+  ],
+  en: [
+    {
+      slug: 'understanding-durable-wasm-performance',
+      title: 'Anatomy of Durable WebAssembly Performance: Why 25,000 RPS is an Outstanding Result',
+      category: 'Performance & Architecture',
+      date: 'June 21, 2026',
+      author: 'Wasmee Core Team',
+      excerpt: 'A deep dive into Wasmee\'s architecture: how sandboxed isolation, state restoration from checkpoints, and dirty-page tracking work, and why 25k RPS is a major milestone for fault-tolerant compute.',
+      content: `
+        <p>When discussing WebAssembly performance, developers often point to raw Wasmtime or V8 benchmarks demonstrating hundreds of thousands or even millions of function calls per second. Meanwhile, Wasmee showcases <strong>25,000+ In-Memory RPS</strong>. Why is there a difference, and why is this throughput actually outstanding for a durable execution model?</p>
 
-      <h2>Understanding Stateless WebAssembly Runtimes</h2>
-      <p>In a standard stateless scenario, Wasmtime keeps a compiled instance of the module warm in the host process memory. When a call arrives, the host jumps directly to the Wasm instructions. The overhead of this invocation is measured in nanoseconds. This is perfect for stateless computations like image processing or data parsing. However, this model lacks fault tolerance: if the host crashes mid-execution, the task state is lost forever.</p>
+        <h2>Understanding Stateless WebAssembly Runtimes</h2>
+        <p>In a standard stateless scenario, Wasmtime keeps a compiled instance of the module warm in the host process memory. When a call arrives, the host jumps directly to the Wasm instructions. The overhead of this invocation is measured in nanoseconds. This is perfect for stateless computations like image processing or data parsing. However, this model lacks fault tolerance: if the host crashes mid-execution, the task state is lost forever.</p>
 
-      <h2>What Wasmee Does to Guarantee Durability</h2>
-      <p>Wasmee is designed specifically for <strong>Durable Micro-Tasks (fault-tolerant business workflows)</strong>. To guarantee absolute security sandboxing and the ability to resume execution from any point after a crash, Wasmee runs through a complete lifecycle for every single request:</p>
+        <h2>What Wasmee Does to Guarantee Durability</h2>
+        <p>Wasmee is designed specifically for <strong>Durable Micro-Tasks (fault-tolerant business workflows)</strong>. To guarantee absolute security sandboxing and the ability to resume execution from any point after a crash, Wasmee runs through a complete lifecycle for every single request:</p>
 
-      <blockquote style="border-left: 4px solid var(--accent-purple); padding-left: 1.5rem; margin: 1.75rem 0; font-style: italic; background: rgba(139, 92, 246, 0.03); padding-top: 0.5rem; padding-bottom: 0.5rem;">
-        <strong>Wasmee Transaction Lifecycle:</strong><br>
-        Initialize Store &rarr; Instantiate Module &rarr; Restore Memory Snapshot &rarr; Invoke Guest Function &rarr; Scan Page Hashes (Dirty Pages) &rarr; Generate State Deltas.
-      </blockquote>
+        <blockquote style="border-left: 4px solid var(--accent-purple); padding-left: 1.5rem; margin: 1.75rem 0; font-style: italic; background: rgba(139, 92, 246, 0.03); padding-top: 0.5rem; padding-bottom: 0.5rem;">
+          <strong>Wasmee Transaction Lifecycle:</strong><br>
+          Initialize Store &rarr; Instantiate Module &rarr; Restore Memory Snapshot &rarr; Invoke Guest Function &rarr; Scan Page Hashes (Dirty Pages) &rarr; Generate State Deltas.
+        </blockquote>
 
-      <h3>1. Sandboxed Isolation</h3>
-      <p>To prevent memory and execution state leakage between different tenant transactions, Wasmee creates new <code>Linker</code>, <code>Store</code> (with strict memory/fuel limits), and <code>Instance</code> objects for every invocation.</p>
+        <h3>1. Sandboxed Isolation</h3>
+        <p>To prevent memory and execution state leakage between different tenant transactions, Wasmee creates new <code>Linker</code>, <code>Store</code> (with strict memory/fuel limits), and <code>Instance</code> objects for every invocation.</p>
 
-      <h3>2. Memory State Restoration</h3>
-      <p>Before running the guest module, Wasmee loads the base memory snapshot and merges the page-dirty deltas accumulated from previous steps. This reconstructed byte array is then written into the newly instantiated Wasm memory, restoring the execution state exactly where it left off.</p>
+        <h3>2. Memory State Restoration</h3>
+        <p>Before running the guest module, Wasmee loads the base memory snapshot and merges the page-dirty deltas accumulated from previous steps. This reconstructed byte array is then written into the newly instantiated Wasm memory, restoring the execution state exactly where it left off.</p>
 
-      <h3>3. Zero-Serialization Input Buffer</h3>
-      <p>Input parameters are copied directly into Wasm memory via a shared static buffer (<code>EXCHANGE_BUFFER</code>). This completely bypasses the overhead of JSON parsing or Base64 encoding/decoding during request dispatching.</p>
+        <h3>3. Zero-Serialization Input Buffer</h3>
+        <p>Input parameters are copied directly into Wasm memory via a shared static buffer (<code>EXCHANGE_BUFFER</code>). This completely bypasses the overhead of JSON parsing or Base64 encoding/decoding during request dispatching.</p>
 
-      <h3>4. Post-Execution Page Hashing & Delta Tracking</h3>
-      <p>After the guest function completes, Wasmee identifies which parts of memory were modified to avoid saving redundant state. It scans the linear memory in <strong>64KB pages</strong>, calculates page hashes, compares them to the base state, and outputs the modified pages as new deltas for checkpoint storage.</p>
+        <h3>4. Post-Execution Page Hashing & Delta Tracking</h3>
+        <p>After the guest function completes, Wasmee identifies which parts of memory were modified to avoid saving redundant state. It scans the linear memory in <strong>64KB pages</strong>, calculates page hashes, compares them to the base state, and outputs the modified pages as new deltas for checkpoint storage.</p>
 
-      <h2>Why 25,000+ RPS is Extremely Fast</h2>
-      <p>This entire recovery, instantiation, zero-copy buffer exchange, guest execution, and page hashing cycle takes <strong>under 40 microseconds</strong> per call (Warm Resume Latency &lt; 40 µs).</p>
-      <p>On a single CPU core, this equals more than 25,000 requests per second. While virtual containers (like Docker) require milliseconds to start and recover state, Wasmee achieves this in microseconds—providing native execution speed alongside robust crash resilience.</p>
+        <h2>Why 25,000+ RPS is Extremely Fast</h2>
+        <p>This entire recovery, instantiation, zero-copy buffer exchange, guest execution, and page hashing cycle takes <strong>under 40 microseconds</strong> per call (Warm Resume Latency &lt; 40 µs).</p>
+        <p>On a single CPU core, this equals more than 25,000 requests per second. While virtual containers (like Docker) require milliseconds to start and recover state, Wasmee achieves this in microseconds—providing native execution speed alongside robust crash resilience.</p>
 
-      <h2>What This Means for Business & Integration (Key Takeaways)</h2>
-      <p>Wasmee's architecture and its 25,000 RPS throughput deliver major commercial and technical advantages to integrating systems:</p>
-      <ul>
-        <li><strong>Unmatched Infrastructure Cost Savings (Up to 10x)</strong>: Instead of running heavy Docker containers for every user script (which require 100MB+ RAM and take milliseconds to boot), Wasmee executes tasks in lightweight sandboxed environments consuming only ~4.2 MB of RAM per run. You can scale to tens of thousands of concurrent users on a single cheap server.</li>
-        <li><strong>Out-of-the-Box Fault Tolerance</strong>: Developers don't need to manually write complex retry logic, state-machine synchronization, or transaction rollback code. If a server crashes mid-task, Wasmee restores the execution state immediately from the last page checkpoint.</li>
-        <li><strong>Secure Third-Party Plugins & Scripts</strong>: If you are building a platform that executes untrusted user-submitted code or developer extensions, Wasmee provides complete sandboxed isolation. It enforces CPU and memory limits, and prevents unauthorized access to the network or filesystem.</li>
-        <li><strong>Simplified Integration Architecture</strong>: Integrating with Wasmee is simple because the host system communicates over high-speed Protobuf via a shared in-memory buffer. You bypass complex data pipes and database sync systems—the engine handles state persistence automatically.</li>
-      </ul>
+        <h2>What This Means for Business & Integration (Key Takeaways)</h2>
+        <p>Wasmee's architecture and its 25,000 RPS throughput deliver major commercial and technical advantages to integrating systems:</p>
+        <ul>
+          <li><strong>Unmatched Infrastructure Cost Savings (Up to 10x)</strong>: Instead of running heavy Docker containers for every user script (which require 100MB+ RAM and take milliseconds to boot), Wasmee executes tasks in lightweight sandboxed environments consuming only ~4.2 MB of RAM per run. You can scale to tens of thousands of concurrent users on a single cheap server.</li>
+          <li><strong>Out-of-the-Box Fault Tolerance</strong>: Developers don't need to manually write complex retry logic, state-machine synchronization, or transaction rollback code. If a server crashes mid-task, Wasmee restores the execution state immediately from the last page checkpoint.</li>
+          <li><strong>Secure Third-Party Plugins & Scripts</strong>: If you are building a platform that executes untrusted user-submitted code or developer extensions, Wasmee provides complete sandboxed isolation. It enforces CPU and memory limits, and prevents unauthorized access to the network or filesystem.</li>
+          <li><strong>Simplified Integration Architecture</strong>: Integrating with Wasmee is simple because the host system communicates over high-speed Protobuf via a shared in-memory buffer. You bypass complex data pipes and database sync systems—the engine handles state persistence automatically.</li>
+        </ul>
 
-      <h2>Conclusion: The Case Against Micro-Optimizations</h2>
-      <p>Further performance optimization—such as handling OS-level page faults to track memory changes—would add complexity and decrease stability for marginal speed gains.</p>
-      <p>With 25,000 RPS per core, Wasmee easily meets the demands of high-throughput distributed systems. Our current architecture achieves the perfect balance between raw speed and reliable execution, allowing our team to focus on expanding SDK features and strengthening sandboxed security.</p>
-    `
-  }
-];
+        <h2>Conclusion: The Case Against Micro-Optimizations</h2>
+        <p>Further performance optimization—such as handling OS-level page faults to track memory changes—would add complexity and decrease stability for marginal speed gains.</p>
+        <p>With 25,000 RPS per core, Wasmee easily meets the demands of high-throughput distributed systems. Our current architecture achieves the perfect balance between raw speed and reliable execution, allowing our team to focus on expanding SDK features and strengthening sandboxed security.</p>
+      `
+    }
+  ]
+};
 
 const homeView = document.getElementById('home-view');
 const blogView = document.getElementById('blog-view');
@@ -675,7 +679,7 @@ function router() {
     window.scrollTo({ top: 0, behavior: 'instant' as any });
   } else if (path.startsWith('blog/')) {
     const slug = path.replace('blog/', '');
-    const post = blogPosts.find(p => p.slug === slug);
+    const post = blogPosts[currentLang].find(p => p.slug === slug);
     if (post) {
       if (homeView) homeView.style.display = 'none';
       if (blogView) {
@@ -706,16 +710,8 @@ function renderBlogFeed() {
   if (!blogPostsList) return;
   blogPostsList.innerHTML = '';
   
-  // Filter blog posts by active language
-  const filteredPosts = blogPosts.filter(post => {
-    if (currentLang === 'ru') {
-      return post.slug.endsWith('-ru');
-    } else {
-      return post.slug.endsWith('-en');
-    }
-  });
-  
-  filteredPosts.forEach(post => {
+  const posts = blogPosts[currentLang] || [];
+  posts.forEach(post => {
     const card = document.createElement('div');
     card.className = 'blog-card';
     card.innerHTML = `
@@ -752,17 +748,7 @@ document.querySelectorAll('[data-switch-lang]').forEach(btn => {
     const match = hash.match(/^#(en|ru)(?:\/(.*))?$/);
     if (match) {
       const path = match[2] || 'home';
-      let targetPath = path;
-      // Swap slug language postfix if inside an article
-      if (path.startsWith('blog/')) {
-        const currentSlug = path.replace('blog/', '');
-        if (newLang === 'ru' && currentSlug.endsWith('-en')) {
-          targetPath = 'blog/' + currentSlug.replace('-en', '-ru');
-        } else if (newLang === 'en' && currentSlug.endsWith('-ru')) {
-          targetPath = 'blog/' + currentSlug.replace('-ru', '-en');
-        }
-      }
-      window.location.hash = `#${newLang}/${targetPath}`;
+      window.location.hash = `#${newLang}/${path}`;
     } else {
       window.location.hash = `#${newLang}/home`;
     }
