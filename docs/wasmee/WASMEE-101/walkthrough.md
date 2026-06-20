@@ -35,6 +35,7 @@ We have successfully implemented Git loading, ZIP archive decompression, JIT pre
 - Upgraded landing page [site/index.html](file:///Users/user/gitlab.com/wasmee/wasmee/site/index.html):
   - Added a new "Live Fiddle" tab to the editor dashboard.
   - Added fields for Git repository URL, branch/tag ref, WASM/ZIP path, optional tokens, gas budgets, and memory limits.
+  - Integrated **Monaco Editor** (VS Code engine) via CDN loader to provide syntax highlighting, auto-bracket completion, and live JSON validation for the payload editor.
 - Configured [site/src/style.css](file:///Users/user/gitlab.com/wasmee/wasmee/site/src/style.css) with form styles.
 - Programmed [site/src/main.ts](file:///Users/user/gitlab.com/wasmee/wasmee/site/src/main.ts):
   - Added event listeners for "Pre-Warm" and "Run" buttons.
