@@ -7,6 +7,8 @@ use tower_http::cors::{CorsLayer, Any};
 
 pub mod engine;
 pub mod git_resolver;
+pub mod serde_bytes_base64;
+pub mod serde_map_bytes_base64;
 
 pub mod pb {
     include!(concat!(env!("OUT_DIR"), "/wasmee.rs"));
@@ -655,6 +657,61 @@ mod tests {
         let (repo, branch) = parse_webhook_payload(payload.as_bytes()).unwrap();
         assert_eq!(repo, "https://gitlab.com/nativebpm/wasmee");
         assert_eq!(branch, "test-branch");
+    }
+
+    #[test]
+    fn test_serde_bytes_base64() {
+        #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
+        struct TestStruct {
+            #[serde(with = "crate::serde_bytes_base64")]
+            data: Vec<u8>,
+        }
+
+        // Test base64 string roundtrip
+        let s = TestStruct { data: b"hello".to_vec() };
+        let json = serde_json::to_string(&s).unwrap();
+        assert_eq!(json, "{\"data\":\"aGVsbG8=\"}");
+        let s2: TestStruct = serde_json::from_str(&json).unwrap();
+        assert_eq!(s, s2);
+
+        // Test empty string deserialization
+        let empty_json = "{\"data\":\"\"}";
+        let s_empty: TestStruct = serde_json::from_str(empty_json).unwrap();
+        assert_eq!(s_empty.data, Vec::<u8>::new());
+
+        // Test sequence deserialization (backward compatibility)
+        let seq_json = "{\"data\":[104,101,108,108,111]}";
+        let s_seq: TestStruct = serde_json::from_str(seq_json).unwrap();
+        assert_eq!(s_seq.data, b"hello".to_vec());
+
+        // Test null deserialization
+        let null_json = "{\"data\":null}";
+        let s_null: TestStruct = serde_json::from_str(null_json).unwrap();
+        assert_eq!(s_null.data, Vec::<u8>::new());
+    }
+
+    #[test]
+    fn test_serde_map_bytes_base64() {
+        #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
+        struct TestMapStruct {
+            #[serde(with = "crate::serde_map_bytes_base64")]
+            deltas: HashMap<i32, Vec<u8>>,
+        }
+
+        let mut deltas = HashMap::new();
+        deltas.insert(1, b"one".to_vec());
+        deltas.insert(2, b"two".to_vec());
+        let s = TestMapStruct { deltas };
+
+        let json = serde_json::to_string(&s).unwrap();
+        let s2: TestMapStruct = serde_json::from_str(&json).unwrap();
+        assert_eq!(s, s2);
+
+        // Test with empty string and sequences in map
+        let mixed_json = r#"{"deltas":{"1":"","2":[116,119,111]}}"#;
+        let s_mixed: TestMapStruct = serde_json::from_str(mixed_json).unwrap();
+        assert_eq!(s_mixed.deltas.get(&1).unwrap(), &Vec::<u8>::new());
+        assert_eq!(s_mixed.deltas.get(&2).unwrap(), &b"two".to_vec());
     }
 }
 
