@@ -45,3 +45,13 @@ dist/assets/index-CDbaqQ9-.js   20.04 kB │ gzip: 7.22 kB
 3. Clicking "Читать статью" navigates to `#blog/understanding-durable-wasm-performance`, showing the detailed Russian article with blockquotes, bold highlights, and clean typography.
 4. Clicking "Back to Blog" takes the user back to the blog feed.
 5. Clicking other navigation links (Features, Benchmarks, How it Works) returns the user to the home view and scrolls to the selected anchor.
+
+## Follow-up Updates (Separate Languages & Rule)
+1. **Separate English & Russian Publications**:
+   * The performance post has been split into two independent publications:
+     * Russian: *«Анатомия производительности Durable WebAssembly: Почему 25 000 RPS — это впечатляющий результат?»* (`#blog/understanding-durable-wasm-performance-ru`)
+     * English: *«Anatomy of Durable WebAssembly Performance: Why 25,000 RPS is an Outstanding Result»* (`#blog/understanding-durable-wasm-performance-en`)
+   * Both posts are presented independently in the Blog Feed, ensuring that the reader gets a highly polished, natural translation optimized for readability in their respective language.
+2. **Translation & Editing Rule**:
+   * Created project customizations directory and rule file [AGENTS.md](file:///Users/user/gitlab.com/wasmee/wasmee/.agents/AGENTS.md).
+   * Documented a strict rule requiring any content translated to multiple languages to undergo manual review for correct phrasing and readability simplification before publication.
