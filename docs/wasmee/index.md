@@ -10,4 +10,6 @@ This index tracks tasks and architectural changes for the Wasmee durable WebAsse
 | [WASMEE-104](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-104/WASMEE-104.md) | Blog Section & Performance Docs | Done | Document the snapshot recovery vs execution speed trade-off and add a beautiful Blog section to the website. |
 | [WASMEE-105](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-105/WASMEE-105.md) | Cloud Deployment & Install Script Verification | Done | Create a robust shell installer script, bundle multi-platform binaries, and verify installation inside clean Docker containers. |
 | [WASMEE-106](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-106/WASMEE-106.md) | Running and Verifying Fiddle Code via Git | In Progress | Build guest WebAssembly module, commit/push to Git, and run/verify it using local wasmee daemon and Fiddle UI. |
+| [WASMEE-107](file:///Users/user/gitlab.com/wasmee/wasmee/docs/wasmee/WASMEE-107/WASMEE-107.md) | Business & Integration Benefits in Blog | In Progress | Add clear business benefits and integration takeaways of Wasmee's durable WebAssembly to the performance blog post. |
+
 
