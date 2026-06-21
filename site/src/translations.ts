@@ -334,7 +334,7 @@ export const translations: TranslationDict = {
 
   // Footer Section
   "footer-copyright": {
-    en: "&copy; 2026 Wasmee Authors. Part of the NativeBPM platform. Released under the Apache 2.0 License.",
-    ru: "&copy; 2026 Авторы Wasmee. Часть платформы NativeBPM. Лицензия Apache 2.0."
+    en: "&copy; 2026 Wasmee Authors. Released under the Apache 2.0 License.",
+    ru: "&copy; 2026 Авторы Wasmee. Лицензия Apache 2.0."
   }
 };

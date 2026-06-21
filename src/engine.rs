@@ -427,17 +427,16 @@ pub fn run_wasm_precompiled(
 
     let func_type = func.ty(&store_obj);
     let expected_types: Vec<wasmtime::ValType> = func_type.params().collect();
-    let wasmtime_params: Vec<wasmtime::Val> = params
-        .iter()
-        .enumerate()
-        .map(|(i, &p)| {
-            match expected_types.get(i) {
-                Some(wasmtime::ValType::I32) => wasmtime::Val::I32(p as i32),
-                Some(wasmtime::ValType::I64) => wasmtime::Val::I64(p as i64),
-                _ => wasmtime::Val::I64(p as i64),
-            }
-        })
-        .collect();
+    let mut wasmtime_params = Vec::with_capacity(expected_types.len());
+    for (i, val_type) in expected_types.iter().enumerate() {
+        let p = params.get(i).copied().unwrap_or(0);
+        let val = match val_type {
+            wasmtime::ValType::I32 => wasmtime::Val::I32(p as i32),
+            wasmtime::ValType::I64 => wasmtime::Val::I64(p as i64),
+            _ => wasmtime::Val::I64(p as i64),
+        };
+        wasmtime_params.push(val);
+    }
     let mut wasmtime_results = vec![wasmtime::Val::I32(0)];
 
     match func.call(&mut store_obj, &wasmtime_params, &mut wasmtime_results) {

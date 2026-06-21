@@ -21,17 +21,12 @@ pub extern "C" fn get_exchange_buffer_pointer() -> *mut u8 {
 }
 
 #[no_mangle]
-pub extern "C" fn execute(_graph_len: u32, _variables_len: u32) -> i32 {
+pub extern "C" fn execute() -> i32 {
     0
 }
 
 #[no_mangle]
-pub extern "C" fn resume(
-    _graph_len: u32,
-    _instance_len: u32,
-    _completed_task_id_ptr: u32,
-    _completed_task_id_len: u32,
-) -> i32 {
+pub extern "C" fn resume() -> i32 {
     0
 }
 
