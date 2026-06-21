@@ -4,6 +4,7 @@ members = [
     "guest",
     "examples/guest_custom",
     "examples/dota-arena/guest",
+    "examples/servicedesk/guest",
 ]
 
 [package]

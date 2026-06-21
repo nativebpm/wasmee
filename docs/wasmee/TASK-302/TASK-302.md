@@ -1,6 +1,6 @@
 ---
 task: TASK-302
-status: In Progress
+status: Completed
 summary: Implement multi-domain examples (Todo, Kanban, ITIL ServiceDesk with SLA, role-based Auth/AuthZ, and custom UI).
 ---
 

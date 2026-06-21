@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wasmee — Multi-Domain Workflows & ServiceDesk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #030712;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.06);
+            --text: #f3f4f6;
+            --text-muted: #9ca3af;
+            --primary: #8b5cf6;
+            --primary-hover: #7c3aed;
+            --secondary: #ec4899;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.1) 0%, transparent 45%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header {
+            background: rgba(3, 7, 18, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #a78bfa 0%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+
+        .tagline {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-left: 1px solid rgba(255, 255, 255, 0.15);
+            padding-left: 0.75rem;
+            margin-left: 0.75rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            border-radius: 9999px;
+            padding: 0.25rem;
+            gap: 0.25rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 0.6rem 1.2rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tab-btn:hover {
+            color: var(--text);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--primary) 0%, #6d28d9 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+        }
+
+        .auth-widget {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .auth-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .role-select {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.35rem 1.75rem 0.35rem 0.75rem;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 0.8em;
+        }
+
+        .role-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+            min-height: 0;
+        }
+
+        .workspace-panel {
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .panel-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary) 0%, #6d28d9 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            padding: 0.75rem 1.25rem;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(139, 92, 246, 0.35);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ------------------ TODO WORKSPACE ------------------ */
+        .todo-list-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            overflow-y: auto;
+            max-height: calc(100vh - 250px);
+            padding-right: 0.5rem;
+        }
+
+        .todo-item-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+        }
+
+        .todo-item-card:hover {
+            border-color: var(--primary);
+            background: rgba(139, 92, 246, 0.03);
+            transform: scale(1.01);
+        }
+
+        .todo-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .todo-text {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .todo-priority-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .priority-high { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .priority-medium { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .priority-low { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+        .priority-critical { background: rgba(239, 68, 68, 0.25); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); animation: pulse 2s infinite; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* ------------------ KANBAN WORKSPACE ------------------ */
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .kanban-col {
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-height: 400px;
+        }
+
+        .kanban-col-header {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .kanban-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .kanban-card:hover {
+            border-color: var(--primary);
+            background: rgba(139, 92, 246, 0.02);
+            transform: translateY(-2px);
+        }
+
+        .kanban-card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+        }
+
+        .kanban-card-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .kanban-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .kanban-assignee {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+        }
+
+        /* ------------------ SERVICEDESK WORKSPACE ------------------ */
+        .incident-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            overflow-y: auto;
+            max-height: calc(100vh - 250px);
+            padding-right: 0.5rem;
+        }
+
+        .incident-card {
+            display: grid;
+            grid-template-columns: 80px 1fr 180px 120px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.25rem 1.5rem;
+            cursor: pointer;
+            gap: 1.5rem;
+            transition: all 0.2s;
+        }
+
+        .incident-card:hover {
+            border-color: var(--primary);
+            background: rgba(139, 92, 246, 0.03);
+        }
+
+        .incident-id {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .incident-main {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .incident-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
+        .incident-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 400px;
+        }
+
+        .sla-progress-box {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .sla-progress-bar {
+            height: 6px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .sla-progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.5s ease;
+        }
+
+        .sla-time-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .incident-status-badge {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-align: center;
+            padding: 0.35rem 0.75rem;
+            border-radius: 8px;
+        }
+
+        .status-new { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.2); }
+        .status-assigned { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); }
+        .status-investigating { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .status-resolved { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+
+        /* ------------------ SIDE DETAILS PANEL ------------------ */
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-height: 0;
+        }
+
+        .side-panel-header {
+            font-size: 1.25rem;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .side-panel-body {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            padding-right: 0.25rem;
+        }
+
+        /* ------------------ FORMS & SCHEMA INPUTS ------------------ */
+        .form-group {
+            margin-bottom: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .form-group input[type="text"], .form-group select {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 0.65rem 0.85rem;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            width: 100%;
+            outline: none;
+        }
+
+        .form-group input[type="text"]:focus, .form-group select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+
+        .form-group input[readonly] {
+            background: rgba(255, 255, 255, 0.015);
+            border-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            cursor: pointer;
+            user-select: none;
+            padding: 0.4rem 0;
+            font-size: 0.9rem;
+        }
+
+        .checkbox-container input {
+            display: none;
+        }
+
+        .checkmark {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .checkbox-container input:checked + .checkmark {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .checkmark::after {
+            content: "✓";
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .checkbox-container input:checked + .checkmark::after {
+            display: block;
+        }
+
+        /* ------------------ AUDIT TIMELINE ------------------ */
+        .timeline-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            border-left: 2px solid rgba(255, 255, 255, 0.05);
+            padding-left: 1rem;
+            margin-left: 0.5rem;
+        }
+
+        .timeline-event {
+            font-size: 0.8rem;
+            line-height: 1.35;
+            color: var(--text-muted);
+            position: relative;
+        }
+
+        .timeline-event::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 999px;
+            position: absolute;
+            left: -1.3rem;
+            top: 0.25rem;
+        }
+
+        /* ------------------ EXECUTION LOGGER ------------------ */
+        .logger-panel {
+            grid-column: 1 / -1;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            height: 200px;
+            min-height: 0;
+        }
+
+        .logger-header {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logger-console {
+            flex: 1;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            color: #34d399;
+            background: rgba(3, 7, 18, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.4;
+        }
+
+        .log-time { color: var(--text-muted); margin-right: 0.5rem; }
+        .log-info { color: #60a5fa; }
+        .log-success { color: #34d399; }
+        .log-warn { color: #f59e0b; }
+        .log-error { color: #f87171; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-section">
+            <span class="logo-text">WASMEE</span>
+            <span class="tagline">Durable Sandbox Orchestration</span>
+        </div>
+        
+        <div class="nav-tabs">
+            <button onclick="switchWorkspace('todo')" id="tab-todo" class="tab-btn active">Todo List</button>
+            <button onclick="switchWorkspace('kanban')" id="tab-kanban" class="tab-btn">Kanban Board</button>
+            <button onclick="switchWorkspace('incident')" id="tab-incident" class="tab-btn">ITIL ServiceDesk</button>
+        </div>
+
+        <div class="auth-widget">
+            <span class="auth-label">Active Role:</span>
+            <select id="role-selector" onchange="onRoleChange()" class="role-select">
+                <option value="Customer">Customer</option>
+                <option value="Support">Support Engineer</option>
+                <option value="Manager">Service Manager</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Main Workspace Area -->
+        <div class="workspace-panel">
+            <div class="panel-header">
+                <h1 id="workspace-title" class="panel-title">Active Tasks</h1>
+                <button onclick="openCreateModal()" id="create-flow-btn" class="btn">
+                    <span>+</span> Create Todo Flow
+                </button>
+            </div>
+
+            <!-- Workspaces lists -->
+            <div id="todo-workspace" class="todo-list-grid">
+                <!-- Todo list goes here -->
+            </div>
+
+            <div id="kanban-workspace" class="kanban-board" style="display: none;">
+                <div class="kanban-col">
+                    <div class="kanban-col-header">Backlog <span id="count-backlog">0</span></div>
+                    <div id="col-backlog" class="kanban-col-body"></div>
+                </div>
+                <div class="kanban-col">
+                    <div class="kanban-col-header">In Progress <span id="count-in_progress">0</span></div>
+                    <div id="col-in_progress" class="kanban-col-body"></div>
+                </div>
+                <div class="kanban-col">
+                    <div class="kanban-col-header">In Review <span id="count-in_review">0</span></div>
+                    <div id="col-in_review" class="kanban-col-body"></div>
+                </div>
+                <div class="kanban-col">
+                    <div class="kanban-col-header">Done <span id="count-done">0</span></div>
+                    <div id="col-done" class="kanban-col-body"></div>
+                </div>
+            </div>
+
+            <div id="incident-workspace" class="incident-grid" style="display: none;">
+                <!-- Incident table goes here -->
+            </div>
+        </div>
+
+        <!-- Details / Action side panel -->
+        <div class="card side-panel">
+            <div id="details-header" class="side-panel-header">Details</div>
+            <div id="details-body" class="side-panel-body">
+                <p style="color: var(--text-muted); text-align: center; margin-top: 2rem;">
+                    Select an active item to view details, enforce SLA milestones, and run operations.
+                </p>
+            </div>
+        </div>
+
+        <!-- Bottom Execution Logger -->
+        <div class="logger-panel">
+            <div class="logger-header">
+                <span>⚡ Wasmee Sandbox Execution Logger</span>
+                <span style="color: var(--success); font-weight: 600;">JIT pre-warmed</span>
+            </div>
+            <div id="console-logs" class="logger-console">--- Wasmee daemon listening on port 8081. Ready to execute sandbox snapshotted sessions. ---</div>
+        </div>
+    </div>
+
+    <script>
+        let currentWorkspace = 'todo';
+        let instances = [];
+        let selectedInstanceId = null;
+        let activeRole = 'Customer';
+        let logIndex = 0;
+
+        function log(message, type = 'info') {
+            const consoleBox = document.getElementById('console-logs');
+            const time = new Date().toLocaleTimeString();
+            let colorClass = 'log-info';
+            if (type === 'success') colorClass = 'log-success';
+            if (type === 'warn') colorClass = 'log-warn';
+            if (type === 'error') colorClass = 'log-error';
+
+            consoleBox.innerHTML += `\n<span class="log-time">[${time}]</span><span class="${colorClass}">${message}</span>`;
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+
+        function switchWorkspace(ws) {
+            currentWorkspace = ws;
+            selectedInstanceId = null;
+
+            // Update buttons styling
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${ws}`).classList.add('active');
+
+            // Hide/Show workspaces
+            document.getElementById('todo-workspace').style.display = ws === 'todo' ? 'grid' : 'none';
+            document.getElementById('kanban-workspace').style.display = ws === 'kanban' ? 'grid' : 'none';
+            document.getElementById('incident-workspace').style.display = ws === 'incident' ? 'grid' : 'none';
+
+            // Update title and button
+            const title = document.getElementById('workspace-title');
+            const createBtn = document.getElementById('create-flow-btn');
+            
+            if (ws === 'todo') {
+                title.textContent = 'Todo List Workflows';
+                createBtn.innerHTML = '<span>+</span> Create Todo Flow';
+                createBtn.style.display = 'inline-flex';
+            } else if (ws === 'kanban') {
+                title.textContent = 'Kanban Task Board';
+                createBtn.innerHTML = '<span>+</span> Create Kanban Task';
+                createBtn.style.display = 'inline-flex';
+            } else if (ws === 'incident') {
+                title.textContent = 'ServiceDesk Incident Management';
+                createBtn.innerHTML = '<span>+</span> Report Incident';
+                createBtn.style.display = 'inline-flex';
+            }
+
+            clearDetails();
+            loadInstances();
+        }
+
+        function onRoleChange() {
+            activeRole = document.getElementById('role-selector').value;
+            log(`Session active role switched to: ${activeRole}`, 'success');
+            if (selectedInstanceId) {
+                loadDetails(selectedInstanceId);
+            }
+        }
+
+        async function loadInstances() {
+            try {
+                const res = await fetch('/api/instances');
+                instances = await res.json() || [];
+                renderWorkspace();
+            } catch (err) {
+                log(`Failed to fetch instances: ${err}`, 'error');
+            }
+        }
+
+        function renderWorkspace() {
+            const todoList = document.getElementById('todo-workspace');
+            const incidentList = document.getElementById('incident-workspace');
+
+            // Clear Kanban columns
+            const cols = {
+                backlog: document.getElementById('col-backlog'),
+                in_progress: document.getElementById('col-in_progress'),
+                in_review: document.getElementById('col-in_review'),
+                done: document.getElementById('col-done')
+            };
+            Object.values(cols).forEach(col => col.innerHTML = '');
+
+            todoList.innerHTML = '';
+            incidentList.innerHTML = '';
+
+            let kanbanCounts = { backlog: 0, in_progress: 0, in_review: 0, done: 0 };
+
+            instances.forEach(inst => {
+                if (inst.process_id === 'todo' && currentWorkspace === 'todo') {
+                    // Render Todo card
+                    const card = document.createElement('div');
+                    card.className = `todo-item-card ${inst.id === selectedInstanceId ? 'active' : ''}`;
+                    card.onclick = () => selectInstance(inst.id);
+                    
+                    const desc = inst.variables.todo_item || 'New Task';
+                    const priority = inst.variables.priority || 'Medium';
+                    const completedText = inst.completed ? '✓ Completed' : '⚡ Pending';
+
+                    card.innerHTML = `
+                        <div class="todo-info">
+                            <span class="todo-priority-badge priority-${priority.toLowerCase()}">${priority}</span>
+                            <span class="todo-text" style="${inst.completed ? 'text-decoration: line-through; color: var(--text-muted);' : ''}">${desc}</span>
+                        </div>
+                        <div style="font-size: 0.85rem; color: ${inst.completed ? 'var(--success)' : 'var(--warning)'}; font-weight: 600;">
+                            ${completedText}
+                        </div>
+                    `;
+                    todoList.appendChild(card);
+
+                } else if (inst.process_id === 'kanban' && currentWorkspace === 'kanban') {
+                    // Render Kanban Card
+                    const colName = inst.variables.column || 'backlog';
+                    kanbanCounts[colName]++;
+
+                    const card = document.createElement('div');
+                    card.className = 'kanban-card';
+                    card.onclick = () => selectInstance(inst.id);
+
+                    const title = inst.variables.task_name || 'Unnamed Task';
+                    const desc = inst.variables.task_description || 'No description.';
+                    const assignee = inst.variables.assignee || 'Unassigned';
+
+                    card.innerHTML = `
+                        <div class="kanban-card-title">${title}</div>
+                        <div class="kanban-card-desc">${desc}</div>
+                        <div class="kanban-card-footer">
+                            <span class="kanban-assignee">${assignee}</span>
+                            <span style="font-size: 0.75rem; color: ${inst.completed ? 'var(--success)' : 'var(--warning)'}; font-weight: 600;">
+                                ${inst.completed ? 'Completed' : 'Active'}
+                            </span>
+                        </div>
+                    `;
+
+                    if (cols[colName]) {
+                        cols[colName].appendChild(card);
+                    }
+
+                } else if (inst.process_id === 'incident' && currentWorkspace === 'incident') {
+                    // Render ServiceDesk Incident Row
+                    const card = document.createElement('div');
+                    card.className = `incident-card ${inst.id === selectedInstanceId ? 'active' : ''}`;
+                    card.onclick = () => selectInstance(inst.id);
+
+                    const title = inst.variables.title || 'Untitled incident';
+                    const desc = inst.variables.description || 'No description provided.';
+                    const priority = inst.variables.priority || 'Medium';
+                    const status = inst.variables.status || 'New';
+                    
+                    // SLA Progress Bar calculations
+                    let barColor = 'var(--success)';
+                    let barWidth = '100%';
+                    let timerText = 'Loading...';
+
+                    if (inst.completed) {
+                        barWidth = '100%';
+                        barColor = 'var(--success)';
+                        timerText = 'Resolved';
+                    } else {
+                        // If New, SLA Reaction applies. If Assigned/Investigating, SLA Resolution applies.
+                        const isNew = status === 'New';
+                        const limitKey = isNew ? 'sla_reaction_limit' : 'sla_resolution_limit';
+                        const limit = inst.variables[limitKey] || 0;
+                        const created = inst.variables.created_at || 0;
+                        const now = Date.now() * 1000000; // ns timestamp
+                        
+                        const total = limit - created;
+                        const elapsed = now - created;
+                        const remaining = limit - now;
+
+                        if (remaining <= 0) {
+                            barWidth = '100%';
+                            barColor = 'var(--danger)';
+                            timerText = isNew ? 'Reaction SLA Breached' : 'Resolution SLA Breached';
+                        } else {
+                            const pct = Math.max(0, Math.min(100, (remaining / total) * 100));
+                            barWidth = pct + '%';
+                            barColor = pct < 25 ? 'var(--danger)' : (pct < 50 ? 'var(--warning)' : 'var(--success)');
+                            
+                            const secs = Math.ceil(remaining / 1000000000);
+                            const mins = Math.floor(secs / 60);
+                            timerText = mins > 0 ? `${mins}m left` : `${secs}s left`;
+                        }
+                    }
+
+                    card.innerHTML = `
+                        <div class="incident-id">#${inst.id.substring(0, 5)}</div>
+                        <div class="incident-main">
+                            <div class="incident-title">${title}</div>
+                            <div class="incident-desc">${desc}</div>
+                        </div>
+                        <div class="sla-progress-box">
+                            <div class="sla-progress-bar">
+                                <div class="sla-progress-fill" style="width: ${barWidth}; background: ${barColor};"></div>
+                            </div>
+                            <div class="sla-time-label">
+                                <span>${priority}</span>
+                                <span>${timerText}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="incident-status-badge status-${status.toLowerCase()}">${status}</span>
+                        </div>
+                    `;
+                    incidentList.appendChild(card);
+                }
+            });
+
+            // Update Kanban column counts
+            if (currentWorkspace === 'kanban') {
+                Object.keys(kanbanCounts).forEach(col => {
+                    document.getElementById(`count-${col}`).textContent = kanbanCounts[col];
+                });
+            }
+        }
+
+        function selectInstance(id) {
+            selectedInstanceId = id;
+            loadDetails(id);
+            renderWorkspace();
+        }
+
+        async function loadDetails(id) {
+            try {
+                const res = await fetch(`/api/instances/state?id=${id}`);
+                const state = await res.json();
+                renderDetails(state);
+            } catch (err) {
+                log(`Failed to fetch instance details: ${err}`, 'error');
+            }
+        }
+
+        function clearDetails() {
+            const body = document.getElementById('details-body');
+            body.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 2rem;">Select an active item to view details, SLA milestones, and execution operations.</p>';
+            document.getElementById('details-header').textContent = 'Details';
+        }
+
+        function renderDetails(state) {
+            const header = document.getElementById('details-header');
+            const body = document.getElementById('details-body');
+
+            header.textContent = `Instance: #${state.id.substring(0, 5)}`;
+            body.innerHTML = '';
+
+            // 1. Render Status details
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'form-group';
+            statusDiv.innerHTML = `
+                <label>Workflow Status</label>
+                <div style="font-weight: 600; font-size: 1rem; color: ${state.completed ? 'var(--success)' : 'var(--warning)'};">
+                    ${state.completed ? '✓ Completed' : '⚡ In Progress'}
+                </div>
+            `;
+            body.appendChild(statusDiv);
+
+            // 2. Render SLA details if incident
+            if (state.process_id === 'incident') {
+                const slaDiv = document.createElement('div');
+                slaDiv.className = 'form-group';
+                const rxBreached = state.variables.sla_reaction_breached ? 'BREACHED' : 'Met / Warning';
+                const resBreached = state.variables.sla_resolution_breached ? 'BREACHED' : 'Met / Warning';
+                
+                slaDiv.innerHTML = `
+                    <label>SLA Timers Status</label>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.35rem;">
+                        <div>Reaction SLA: <span style="font-weight:600; color:${state.variables.sla_reaction_breached ? 'var(--danger)':'var(--success)'}">${rxBreached}</span></div>
+                        <div>Resolution SLA: <span style="font-weight:600; color:${state.variables.sla_resolution_breached ? 'var(--danger)':'var(--success)'}">${resBreached}</span></div>
+                    </div>
+                `;
+                body.appendChild(slaDiv);
+            }
+
+            // 3. Render Dynamic Actions Form
+            if (!state.completed && state.widgets && state.widgets.length > 0) {
+                const form = document.createElement('form');
+                form.onsubmit = (e) => { e.preventDefault(); submitForm(state.id); };
+                
+                const formFields = document.createElement('div');
+                state.widgets.forEach(w => {
+                    const group = document.createElement('div');
+                    group.className = 'form-group';
+
+                    const label = document.createElement('label');
+                    label.textContent = w.label;
+                    group.appendChild(label);
+
+                    if (w.widget === 'checkbox' || w.type === 'boolean') {
+                        const container = document.createElement('label');
+                        container.className = 'checkbox-container';
+                        
+                        const input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.name = w.name;
+                        input.checked = !!w.value;
+                        
+                        const mark = document.createElement('span');
+                        mark.className = 'checkmark';
+                        
+                        container.appendChild(input);
+                        container.appendChild(mark);
+                        
+                        const text = document.createElement('span');
+                        text.textContent = 'Check to confirm';
+                        container.appendChild(text);
+                        
+                        group.appendChild(container);
+                    } else if (w.widget === 'select' && w.options) {
+                        const select = document.createElement('select');
+                        select.name = w.name;
+                        w.options.forEach(opt => {
+                            const option = document.createElement('option');
+                            option.value = opt;
+                            option.textContent = opt;
+                            if (opt === w.value) option.selected = true;
+                            select.appendChild(option);
+                        });
+                        group.appendChild(select);
+                    } else {
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.name = w.name;
+                        input.value = w.value || '';
+                        if (w.required) input.required = true;
+                        
+                        // Incident assignment & resolution text box readOnly controls
+                        const activeTask = state.waiting_nodes[0];
+                        if (activeTask !== 'create_incident' && (w.name === 'title' || w.name === 'description' || w.name === 'priority')) {
+                            input.readOnly = true;
+                        }
+                        group.appendChild(input);
+                    }
+
+                    formFields.appendChild(group);
+                });
+
+                form.appendChild(formFields);
+
+                const submitBtn = document.createElement('button');
+                submitBtn.type = 'submit';
+                submitBtn.className = 'btn';
+                submitBtn.style.width = '100%';
+                submitBtn.style.marginTop = '1rem';
+                submitBtn.textContent = 'Submit Workflow Step';
+                form.appendChild(submitBtn);
+
+                body.appendChild(form);
+            }
+
+            // 4. Render incident history log timeline
+            if (state.process_id === 'incident' && state.variables.history) {
+                const historyBox = document.createElement('div');
+                historyBox.style.marginTop = '1.5rem';
+                historyBox.innerHTML = '<div class="timeline-title">Incident Audit History</div>';
+                
+                const timeline = document.createElement('div');
+                timeline.className = 'timeline';
+                state.variables.history.forEach(logLine => {
+                    const event = document.createElement('div');
+                    event.className = 'timeline-event';
+                    event.textContent = logLine;
+                    timeline.appendChild(event);
+                });
+                historyBox.appendChild(timeline);
+                body.appendChild(historyBox);
+            }
+        }
+
+        async function submitForm(id) {
+            const form = document.querySelector('.side-panel-body form');
+            const formData = new FormData(form);
+            const variables = {};
+
+            for (let [key, val] of formData.entries()) {
+                variables[key] = val;
+            }
+
+            // Handle checkbox logic
+            form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                variables[cb.name] = cb.checked;
+            });
+
+            log(`Resuming session ${id.substring(0, 5)} under active role: ${activeRole}...`, 'info');
+
+            try {
+                const res = await fetch('/api/instances/submit', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Role': activeRole
+                    },
+                    body: JSON.stringify({
+                        id: id,
+                        variables: variables
+                    })
+                });
+
+                if (res.status === 403) {
+                    const errMsg = await res.text();
+                    log(`Wasmee authorization error: ${errMsg}`, 'error');
+                    alert(`Access Denied: You do not have permissions for this action as a ${activeRole}!`);
+                    return;
+                }
+
+                if (!res.ok) {
+                    const errMsg = await res.text();
+                    log(`Execution error: ${errMsg}`, 'error');
+                    alert(`Error submitting step: ${errMsg}`);
+                    return;
+                }
+
+                log(`Sandbox state updated successfully. Checkpoint saved.`, 'success');
+                loadInstances();
+                loadDetails(id);
+            } catch (err) {
+                log(`Failed to submit: ${err}`, 'error');
+            }
+        }
+
+        async function openCreateModal() {
+            let variables = {};
+            if (currentWorkspace === 'todo') {
+                const desc = prompt('Enter Todo description:');
+                if (!desc) return;
+                variables = { todo_item: desc, priority: 'Medium' };
+            } else if (currentWorkspace === 'kanban') {
+                const name = prompt('Enter Kanban Task Name:');
+                if (!name) return;
+                const desc = prompt('Enter Task Description:');
+                variables = { task_name: name, task_description: desc || '' };
+            } else if (currentWorkspace === 'incident') {
+                const title = prompt('Enter Incident Title:');
+                if (!title) return;
+                const desc = prompt('Enter Incident Description:');
+                const priority = prompt('Enter Priority (Low, Medium, High, Critical):', 'Medium');
+                variables = { title: title, description: desc || '', priority: priority || 'Medium' };
+            }
+
+            log(`Starting execution of workflow: ${currentWorkspace}...`, 'info');
+            try {
+                const res = await fetch('/api/instances/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        process_id: currentWorkspace,
+                        variables: variables
+                    })
+                });
+
+                const inst = await res.json();
+                log(`Execution started. Instance ID: ${inst.id.substring(0, 5)}. Checkpoint saved.`, 'success');
+                loadInstances();
+                selectInstance(inst.id);
+            } catch (err) {
+                log(`Failed to create flow: ${err}`, 'error');
+            }
+        }
+
+        // Auto Refresh Incident SLA timers every second
+        setInterval(() => {
+            if (currentWorkspace === 'incident') {
+                renderWorkspace();
+                if (selectedInstanceId) {
+                    const inst = instances.find(i => i.id === selectedInstanceId);
+                    if (inst && inst.variables.history) {
+                        // Re-render side timeline values
+                        const timeline = document.querySelector('.timeline');
+                        if (timeline) {
+                            timeline.innerHTML = '';
+                            inst.variables.history.forEach(logLine => {
+                                const event = document.createElement('div');
+                                event.className = 'timeline-event';
+                                event.textContent = logLine;
+                                timeline.appendChild(event);
+                            });
+                        }
+                    }
+                }
+            }
+        }, 1000);
+
+        // Init App
+        switchWorkspace('todo');
+    </script>
+</body>
+</html>

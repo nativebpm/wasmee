@@ -145,19 +145,19 @@ export const translations: TranslationDict = {
   // Metrics Section
   "metric-label-latency": {
     en: "Warm Resume Latency",
-    ru: "Задержка восстановления"
+    ru: "Warm Resume Latency"
   },
   "metric-desc-latency": {
     en: "Fastest state recovery among modern WebAssembly runner platforms.",
-    ru: "Самое быстрое восстановление состояния среди современных WebAssembly-платформ."
+    ru: "Самое быстрое восстановление состояния (Warm Resume) среди современных WebAssembly-платформ."
   },
   "metric-label-sandboxing": {
     en: "Memory Sandboxing",
-    ru: "Изоляция памяти"
+    ru: "Memory Sandboxing"
   },
   "metric-desc-sandboxing": {
     en: "Zero-trust memory boundary controls preventing CPU leaks and heap-overruns.",
-    ru: "Контроль границ памяти по принципу Zero-Trust, исключающий утечки и переполнение кучи."
+    ru: "Контроль границ памяти по принципу Zero-Trust, предотвращающий утечки ресурсов и переполнение кучи (heap overruns)."
   },
   "metric-label-throughput": {
     en: "In-Memory RPS",
@@ -165,15 +165,15 @@ export const translations: TranslationDict = {
   },
   "metric-desc-throughput": {
     en: "Blazing throughput executing sandboxed WebAssembly tasks on a single node.",
-    ru: "Сверхвысокая пропускная способность при выполнении изолированных Wasm-задач на одном узле."
+    ru: "Экстремальная пропускная способность при выполнении sandboxed WebAssembly-задач на одном узле."
   },
   "metric-label-safety": {
     en: "Pure Sandboxed Safety",
-    ru: "Абсолютная безопасность"
+    ru: "Pure Sandboxed Safety"
   },
   "metric-desc-safety": {
     en: "Completely blocks untrusted network access, filesystem writes, and process fork APIs.",
-    ru: "Полное блокирование несанкционированного доступа к сети, файловой системе и системным вызовам fork."
+    ru: "Полное блокирование несанкционированного доступа к сети, записи в файловую систему и вызовов API создания процессов (fork)."
   },
   "metric-cta-text": {
     en: "Want to run these benchmarks yourself?",
@@ -191,65 +191,65 @@ export const translations: TranslationDict = {
   },
   "features-subtitle": {
     en: "Why teams choose Wasmee for executing business logic and untrusted user-submitted code.",
-    ru: "Почему разработчики выбирают Wasmee для выполнения бизнес-логики и сторонних скриптов."
+    ru: "Почему команды выбирают Wasmee для выполнения бизнес-логики и выполнения untrusted пользовательского кода."
   },
   "feature-title-snapshots": {
     en: "Durable Snapshots",
-    ru: "Отказоустойчивые слепки"
+    ru: "Durable Snapshots"
   },
   "feature-desc-snapshots": {
     en: "Serialize full memory states to PostgreSQL or AWS S3. Restore execution seamlessly even if the host machine crashes mid-step.",
-    ru: "Сериализация всего состояния памяти в PostgreSQL или AWS S3. Бесшовное возобновление работы даже при сбое хост-машины."
+    ru: "Сериализация полного состояния памяти (memory state) в PostgreSQL или AWS S3. Бесшовное восстановление выполнения, даже если хост-машина дает сбой посреди шага (mid-step)."
   },
   "feature-title-jit": {
     en: "Rust-Native JIT Performance",
-    ru: "JIT-производительность на Rust"
+    ru: "Rust-Native JIT Performance"
   },
   "feature-desc-jit": {
     en: "Compiles guest WebAssembly modules directly into machine code via Wasmtime Cranelift JIT. No virtual containers, no JVM overhead.",
-    ru: "Компиляция гостевых Wasm-модулей в машинный код через Wasmtime Cranelift JIT. Без виртуальных контейнеров и накладных расходов JVM."
+    ru: "Компиляция гостевых модулей WebAssembly напрямую в машинный код с помощью JIT-компилятора Wasmtime Cranelift. Без виртуальных контейнеров и накладных расходов JVM."
   },
   "feature-title-security": {
     en: "Zero-Trust Security",
-    ru: "Безопасность Zero-Trust"
+    ru: "Zero-Trust Security"
   },
   "feature-desc-security": {
     en: "Strict execution constraints. Blocks unauthorized host network calls, directory listings, command lines, and OS threads.",
-    ru: "Жесткие ограничения выполнения. Блокировка сетевых вызовов, доступа к файлам и создания системных потоков."
+    ru: "Жесткие ограничения выполнения. Блокировка неавторизованных хост-вызовов сети, листинга директорий, доступа к командной строке и потоков ОС."
   },
   "feature-title-coldstarts": {
     en: "Microsecond Cold Starts",
-    ru: "Микросекундный холодный старт"
+    ru: "Microsecond Cold Starts (холодный старт)"
   },
   "feature-desc-coldstarts": {
     en: "Keeps a hot-cache pool of compiled modules ready to execute instantly. Reduces guest initialization overhead to near-zero.",
-    ru: "Пул горячего кэша скомпилированных модулей для мгновенного запуска. Снижает накладные расходы на инициализацию до минимума."
+    ru: "Поддержание пула горячего кэша (hot-cache pool) скомпилированных модулей для мгновенного выполнения. Снижает оверхед на инициализацию гостя практически до нуля."
   },
   "feature-title-gas": {
     en: "Gas-Metered Execution",
-    ru: "Учет ресурсов (Gas)"
+    ru: "Gas-Metered Execution"
   },
   "feature-desc-gas": {
     en: "Prevent resource exhaustion and infinite loops by defining strict execution limits (gas budgets) for untrusted guest tasks.",
-    ru: "Предотвращение бесконечных циклов и перегрузки системы путем задания жестких лимитов выполнения (бюджета газа) для задач."
+    ru: "Предотвращение бесконечных циклов и перерасхода ресурсов путем задания жестких лимитов выполнения (gas budget) для untrusted гостевых задач."
   },
   "feature-title-exchange": {
     en: "Seamless Variable Exchange",
-    ru: "Удобный обмен переменными"
+    ru: "Seamless Variable Exchange"
   },
   "feature-desc-exchange": {
     en: "Bidirectional serialization mappings. Read/write execution context variables using simple import functions directly from guest Wasm.",
-    ru: "Двунаправленный маппинг переменных. Чтение и запись переменных контекста через простые функции импорта прямо из Wasm."
+    ru: "Двунаправленная сериализация и маппинг. Чтение/запись переменных контекста выполнения с помощью простых функций импорта прямо из гостевого Wasm."
   },
 
   // Code Playground Section
   "code-title": {
     en: "Write Once. Run and Persist Anywhere.",
-    ru: "Пишите один раз. Запускайте и сохраняйте где угодно."
+    ru: "Write Once. Run & Persist Anywhere."
   },
   "code-subtitle": {
     en: "How guest scripts leverage Wasmee host bindings for state-resilient executions.",
-    ru: "Как гостевые скрипты используют привязки Wasmee для отказоустойчивого выполнения."
+    ru: "Как гостевые скрипты используют host bindings в Wasmee для отказоустойчивого выполнения."
   },
   "fiddle-label-repo": {
     en: "Git Repository URL (GitHub/GitLab)",
@@ -265,11 +265,11 @@ export const translations: TranslationDict = {
   },
   "fiddle-label-token": {
     en: "Git Token (Optional)",
-    ru: "Git Токен (необязательно)"
+    ru: "Git Token (необязательно)"
   },
   "fiddle-label-gas": {
     en: "Max Gas (Fuel Limit)",
-    ru: "Лимит газа (Max Gas)"
+    ru: "Max Gas (лимит выполнения)"
   },
   "fiddle-label-memory": {
     en: "Max Memory limit (MB)",
@@ -277,41 +277,74 @@ export const translations: TranslationDict = {
   },
   "fiddle-label-input": {
     en: "Input State (JSON)",
-    ru: "Входное состояние (JSON)"
+    ru: "Входное состояние (JSON payload)"
   },
   "fiddle-btn-warm": {
     en: "Pre-Warm (JIT)",
-    ru: "Прогреть JIT"
+    ru: "Pre-Warm (JIT)"
   },
   "fiddle-btn-sync": {
     en: "Sync from Git",
-    ru: "Синхронизировать из Git"
+    ru: "Sync from Git"
   },
   "fiddle-btn-exec": {
     en: "Run on Wasmee",
-    ru: "Запустить в Wasmee"
+    ru: "Run on Wasmee"
   },
   "fiddle-console-title": {
     en: "Execution Console",
-    ru: "Консоль выполнения"
+    ru: "Execution Console"
   },
   "fiddle-gitops-title": {
     en: "⚡ GitOps Webhook (Zero Pipeline Hot-Reload)",
-    ru: "⚡ GitOps Webhook (Горячая перезагрузка без пайплайнов)"
+    ru: "⚡ GitOps Webhook (Zero Pipeline Hot-Reload)"
   },
   "fiddle-gitops-desc": {
     en: "Register this URL as a Webhook in GitHub or GitLab to automatically hot-reload the JIT cache on push:",
-    ru: "Зарегистрируйте этот URL как Webhook в GitHub или GitLab для автоматического обновления JIT-кэша при push-событии:"
+    ru: "Зарегистрируйте этот URL как Webhook в GitHub или GitLab для автоматического hot-reload JIT-кэша при push:"
+  },
+
+  "usecases-title": {
+    en: "Real-World Use Cases",
+    ru: "Примеры использования"
+  },
+  "usecases-subtitle": {
+    en: "How organizations and developers leverage Wasmee for high-density, secure executions.",
+    ru: "Как организации и разработчики используют Wasmee для высокоплотных и безопасных вычислений."
+  },
+  "usecase-title-business": {
+    en: "Business & Workflow Automation",
+    ru: "Автоматизация бизнеса и процессов"
+  },
+  "usecase-desc-business": {
+    en: "Business automation platforms use Wasmee to execute custom business logic, untrusted script tasks, and declarative workflow transitions inside a secure, gas-metered sandbox with durable execution state.",
+    ru: "Платформы автоматизации бизнеса используют Wasmee для выполнения пользовательской бизнес-логики, untrusted задач-сценариев (script tasks) и декларативных переходов процессов в безопасной sandboxed-среде с учетом газа (gas-metered) и Durable-состоянием выполнения (durable execution state)."
+  },
+  "usecase-title-gamedev": {
+    en: "Game Development & Resilient Multiplayer",
+    ru: "Game Development & Resilient Multiplayer"
+  },
+  "usecase-desc-gamedev": {
+    en: "In multiplayer game development, Wasmee acts as a lightweight, state-synchronized engine. If a player disconnects or the host node crashes, Wasmee instantly restores the authoritative game memory state from the last page checkpoint, ensuring zero-overhead reconnection and fair play.",
+    ru: "В разработке мультиплеерных игр Wasmee выступает в роли легковесного движка с синхронизацией состояния. При отключении игрока или сбое хост-сервера Wasmee мгновенно восстанавливает авторитетное состояние игровой памяти из последнего чекпоинта (page checkpoint), гарантируя быстрое переподключение без накладных расходов (zero-overhead) и честную игру."
+  },
+  "usecase-title-sync": {
+    en: "Frontend & Backend State Synchronization",
+    ru: "Синхронизация состояния Frontend и Backend"
+  },
+  "usecase-desc-sync": {
+    en: "Wasmee acts as an authoritative, lightweight state store for multi-client applications. It enables seamless state synchronization between interactive frontends and backend services by persisting the exact virtual machine memory checkpoints, eliminating complex cache layers and synchronization protocols.",
+    ru: "Wasmee выступает в качестве авторитетного легковесного хранилища состояния (state store) для мультиклиентских приложений. Он обеспечивает бесшовную синхронизацию состояния между интерактивными фронтендами и бэкенд-сервисами путем сохранения точных чекпоинтов памяти виртуальной машины, устраняя необходимость в сложных кэш-слоях и протоколах синхронизации."
   },
 
   // CTA Section
   "cta-title": {
     en: "Build High-Density Durable Executions",
-    ru: "Создавайте высокоплотные Durable-вычисления"
+    ru: "Создавайте высокоплотные Durable Executions"
   },
   "cta-subtitle": {
     en: "Run untrusted user logic, scale microservices, or orchestrate complex execution pipelines at the speed of native code.",
-    ru: "Запускайте сторонний код, масштабируйте микросервисы и оркеструйте распределенные процессы со скоростью нативного приложения."
+    ru: "Запускайте untrusted пользовательский код, масштабируйте микросервисы и оркеструйте распределенные процессы со скоростью нативного приложения."
   },
   "cta-btn-github": {
     en: "View on GitHub",
@@ -319,7 +352,7 @@ export const translations: TranslationDict = {
   },
   "cta-btn-docs": {
     en: "View SDK Guides",
-    ru: "Руководства SDK"
+    ru: "SDK Guides"
   },
 
   // Blog View Section
