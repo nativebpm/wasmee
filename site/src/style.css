@@ -641,6 +641,7 @@ p {
   border-radius: 16px;
   padding: 2.5rem;
   transition: var(--transition-smooth);
+  cursor: pointer;
 }
 
 .usecase-card:hover {

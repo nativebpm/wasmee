@@ -755,6 +755,62 @@ document.querySelectorAll('[data-switch-lang]').forEach(btn => {
   });
 });
 
+// Bind clickable product cards to Live Fiddle presets
+const productCards = document.querySelectorAll('.usecase-card');
+productCards.forEach(card => {
+  card.addEventListener('click', () => {
+    const product = card.getAttribute('data-product');
+    if (!product) return;
+
+    // Switch to Fiddle tab
+    const fiddleTabBtn = document.querySelector('.lang-btn[data-lang="fiddle"]') as HTMLButtonElement;
+    if (fiddleTabBtn) {
+      fiddleTabBtn.click();
+    }
+
+    // Load template config
+    const repoInput = document.getElementById('fiddle-repo') as HTMLInputElement;
+    const refInput = document.getElementById('fiddle-ref') as HTMLInputElement;
+    const pathInput = document.getElementById('fiddle-path') as HTMLInputElement;
+
+    if (repoInput) repoInput.value = 'https://github.com/nativebpm/wasmee';
+    if (refInput) refInput.value = 'main';
+
+    let payload = {};
+    if (product === 'workflow') {
+      if (pathInput) pathInput.value = 'examples/todo-list/main.go';
+      payload = {
+        todo_item: 'Task description from Workflow Product',
+        priority: 'High',
+        todo_item_completed: false
+      };
+    } else if (product === 'game') {
+      if (pathInput) pathInput.value = 'examples/dota-arena/main.go';
+      payload = {
+        action: 'play_turn',
+        game_mode: 'pvp'
+      };
+    } else if (product === 'servicedesk') {
+      if (pathInput) pathInput.value = 'examples/servicedesk/main.go';
+      payload = {
+        title: 'Incident ticket from ServiceDesk Product',
+        description: 'System database connection timeout.',
+        priority: 'Critical'
+      };
+    }
+
+    if (payloadEditor) {
+      payloadEditor.setValue(JSON.stringify(payload, null, 2));
+    }
+
+    // Scroll to Fiddle / Code section
+    const codeSection = document.getElementById('code');
+    if (codeSection) {
+      codeSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+});
+
 // Bind navigation routes
 window.addEventListener('hashchange', router);
 window.addEventListener('load', router);
