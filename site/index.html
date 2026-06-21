@@ -34,6 +34,7 @@
         <a href="#features" class="nav-item" data-i18n="nav-features">Features</a>
         <a href="#benchmarks" class="nav-item" data-i18n="nav-benchmarks">Benchmarks</a>
         <a href="#code" class="nav-item" data-i18n="nav-how-it-works">How it Works</a>
+        <a href="#use-cases" class="nav-item" data-i18n="nav-use-cases">Use Cases</a>
         <a href="#blog" class="nav-item" id="nav-blog" data-i18n="nav-blog">Blog</a>
         <a href="https://github.com/nativebpm/wasmee" class="nav-item" target="_blank">GitHub</a>
       </nav>
@@ -406,6 +407,58 @@ func main() {}</code></pre>
             <div class="output-line"><span class="out-time">[14:24:00]</span> <span class="out-tag info">INFO</span> Saving variable 'calculated_tax'...</div>
             <div class="output-line success-line"><span class="out-time">[14:24:00]</span> <span class="out-tag succ">DONE</span> Exit code: 0 (Execution Success, Duration: 39.6 µs)</div>
           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Use Cases Section -->
+  <section class="usecases-section" id="use-cases">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title" data-i18n="usecases-title">Real-World Use Cases</h2>
+        <p class="section-subtitle" data-i18n="usecases-subtitle">How organizations and developers leverage Wasmee for high-density, secure executions.</p>
+      </div>
+
+      <div class="usecases-grid">
+        <div class="usecase-card">
+          <div class="usecase-icon-wrapper green">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+          </div>
+          <h3 class="usecase-title" data-i18n="usecase-title-business">Business & Workflow Automation</h3>
+          <p class="usecase-desc" data-i18n="usecase-desc-business">
+            Business automation platforms use Wasmee to execute custom business logic, untrusted script tasks, and declarative workflow transitions inside a secure, gas-metered sandbox with durable execution state.
+          </p>
+        </div>
+
+        <div class="usecase-card">
+          <div class="usecase-icon-wrapper orange">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+              <path d="M12 12h.01M16 10h.01M8 12h.01M12 10h.01M12 14h.01M16 12h.01M8 10h.01M8 14h.01"></path>
+            </svg>
+          </div>
+          <h3 class="usecase-title" data-i18n="usecase-title-gamedev">Game Development & Resilient Multiplayer</h3>
+          <p class="usecase-desc" data-i18n="usecase-desc-gamedev">
+            In multiplayer game development, Wasmee acts as a lightweight, state-synchronized engine. If a player disconnects or the host node crashes, Wasmee instantly restores the authoritative game memory state from the last page checkpoint, ensuring zero-overhead reconnection and fair play.
+          </p>
+        </div>
+
+        <div class="usecase-card">
+          <div class="usecase-icon-wrapper purple">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+              <path d="M12 6v6l4 2"></path>
+            </svg>
+          </div>
+          <h3 class="usecase-title" data-i18n="usecase-title-sync">Frontend & Backend State Synchronization</h3>
+          <p class="usecase-desc" data-i18n="usecase-desc-sync">
+            Wasmee acts as an authoritative, lightweight state store for multi-client applications. It enables seamless state synchronization between interactive frontends and backend services by persisting the exact virtual machine memory checkpoints, eliminating complex cache layers and synchronization protocols.
+          </p>
         </div>
       </div>
     </div>

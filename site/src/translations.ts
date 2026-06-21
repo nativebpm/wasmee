@@ -23,6 +23,10 @@ export const translations: TranslationDict = {
     en: "Blog",
     ru: "Блог"
   },
+  "nav-use-cases": {
+    en: "Use Cases",
+    ru: "Примеры использования"
+  },
   "nav-get-started": {
     en: "Get Started",
     ru: "Начать работу"
@@ -35,11 +39,11 @@ export const translations: TranslationDict = {
   },
   "hero-title": {
     en: "Run WebAssembly with Extreme Speed & Durable State",
-    ru: "Запуск WebAssembly со сверхвысокой скоростью и отказоустойчивым состоянием"
+    ru: "Запуск WebAssembly с экстремальной скоростью и Durable State"
   },
   "hero-subtitle": {
     en: "Wasmee is a sandboxed WebAssembly execution engine written in Rust on top of Wasmtime. Engineered for high-density, crash-resilient executions, providing microsecond startup times and native state checkpointing.",
-    ru: "Wasmee — это изолированный движок выполнения WebAssembly, написанный на Rust поверх Wasmtime. Разработан для высокой плотности и отказоустойчивости вычислений, обеспечивая микросекундное время запуска и нативное сохранение снимков состояния."
+    ru: "Wasmee — это sandboxed-движок выполнения WebAssembly, написанный на Rust поверх Wasmtime. Спроектирован для высокоплотных (high-density) и устойчивых к сбоям (crash-resilient) вычислений, обеспечивая микросекундный запуск и нативное создание чекпоинтов состояния (state checkpointing)."
   },
   "hero-btn-install": {
     en: "Install Wasmee",
@@ -71,19 +75,19 @@ export const translations: TranslationDict = {
   },
   "term-run-initialized": {
     en: "Instance initialized. Gas configured: 10,000,000. Memory limit: 32MB.",
-    ru: "Инстанс инициализирован. Лимит газа: 10 000 000. Лимит памяти: 32МБ."
+    ru: "Инстанс инициализирован. Конфигурация газа (gas): 10 000 000. Лимит памяти: 32 МБ."
   },
   "term-run-evaluating": {
     en: "Evaluating payload: { \"order_total\": 4500, \"customer\": \"ACME Corp\" }",
-    ru: "Обработка параметров: { \"order_total\": 4500, \"customer\": \"ACME Corp\" }"
+    ru: "Обработка payload: { \"order_total\": 4500, \"customer\": \"ACME Corp\" }"
   },
   "term-run-exchanged": {
     en: "Host variable exchanged. Calling set_variable(\"tax_rate\", 0.15)",
-    ru: "Обмен переменными хоста выполнен. Вызов set_variable(\"tax_rate\", 0.15)"
+    ru: "Синхронизация хост-переменных выполнена (host variable exchanged). Вызов set_variable(\"tax_rate\", 0.15)"
   },
   "term-run-success": {
     en: "Task executed in 39.6 microseconds. Memory footprint: 4.2 MB.",
-    ru: "Задача выполнена за 39.6 микросекунд. Объем памяти: 4.2 МБ."
+    ru: "Задача выполнена за 39.6 микросекунд. Memory footprint: 4.2 МБ."
   },
 
   // Terminal Snapshot lines
@@ -93,19 +97,19 @@ export const translations: TranslationDict = {
   },
   "term-snap-warn": {
     en: "Snapshot triggered at guest execution checkpoint (Step 2).",
-    ru: "Снимок запущен на контрольной точке гостевого выполнения (Шаг 2)."
+    ru: "Создан snapshot на чекпоинте гостевого выполнения (Шаг 2)."
   },
   "term-snap-serializing": {
     en: "Serializing VM instance memory layout (14 pages)...",
-    ru: "Сериализация раскладки памяти инстанса VM (14 страниц)..."
+    ru: "Сериализация memory layout инстанса VM (14 страниц)..."
   },
   "term-snap-success": {
     en: "Snapshot binary written to database (280 KB). VM state saved.",
-    ru: "Бинарный файл слепка записан в БД (280 КБ). Состояние VM сохранено."
+    ru: "Бинарный файл snapshot записан в БД (280 КБ). Состояние VM сохранено."
   },
   "term-snap-resume": {
     en: "VM state restored. Resuming step 3 with full memory context.",
-    ru: "Состояние VM восстановлено. Возобновление шага 3 с полным контекстом памяти."
+    ru: "Состояние VM восстановлено. Возобновление шага 3 с полным memory context."
   },
 
   // Terminal Bench lines
@@ -119,23 +123,23 @@ export const translations: TranslationDict = {
   },
   "term-bench-latency-p50": {
     en: "Warm Resume Latency (p50):",
-    ru: "Задержка восстановления (p50):"
+    ru: "Warm Resume Latency (p50):"
   },
   "term-bench-latency-p95": {
     en: "Warm Resume Latency (p95):",
-    ru: "Задержка восстановления (p95):"
+    ru: "Warm Resume Latency (p95):"
   },
   "term-bench-throughput-vm": {
     en: "Throughput (In-Memory VM):",
-    ru: "Пропускная способность (In-Memory VM):"
+    ru: "Throughput (In-Memory VM):"
   },
   "term-bench-throughput-http": {
     en: "Throughput (HTTP API):",
-    ru: "Пропускная способность (HTTP API):"
+    ru: "Throughput (HTTP API):"
   },
   "term-bench-sla": {
     en: "SLA Checks Pass Rate:",
-    ru: "Успешность проверок SLA:"
+    ru: "SLA Checks Pass Rate:"
   },
 
   // Metrics Section

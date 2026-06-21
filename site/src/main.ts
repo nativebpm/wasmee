@@ -654,7 +654,7 @@ function router() {
     link.classList.remove('active');
   });
   
-  if (path === 'home' || path.startsWith('features') || path.startsWith('benchmarks') || path.startsWith('code') || path.startsWith('get-started')) {
+  if (path === 'home' || path.startsWith('features') || path.startsWith('benchmarks') || path.startsWith('use-cases') || path.startsWith('code') || path.startsWith('get-started')) {
     if (homeView) homeView.style.display = 'block';
     if (blogView) blogView.style.display = 'none';
     

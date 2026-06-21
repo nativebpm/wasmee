@@ -610,6 +610,87 @@ p {
   color: var(--text-secondary);
 }
 
+/* Use Cases Section */
+.usecases-section {
+  padding: 6rem 0;
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.usecases-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.5rem;
+}
+
+@media (max-width: 1024px) {
+  .usecases-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .usecases-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.usecase-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  padding: 2.5rem;
+  transition: var(--transition-smooth);
+}
+
+.usecase-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--border-hover);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.usecase-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.usecase-icon-wrapper.green { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); }
+.usecase-icon-wrapper.orange { background: rgba(249, 115, 22, 0.1); color: var(--accent-orange); }
+.usecase-icon-wrapper.purple { background: rgba(139, 92, 246, 0.1); color: var(--accent-purple); }
+
+.usecase-title {
+  font-size: 1.35rem;
+  margin-bottom: 1rem;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.usecase-desc {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.usecase-link {
+  color: var(--accent-purple);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px dashed var(--accent-purple);
+  transition: var(--transition-fast);
+}
+
+.usecase-link:hover {
+  color: var(--text-primary);
+  border-bottom-color: var(--text-primary);
+}
+
 /* Code / Playground Section */
 .code-section {
   padding: 6rem 0 8rem;

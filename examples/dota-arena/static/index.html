@@ -1,0 +1,2047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wasmee - 5v5 Dota Wasm Arena</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --primary-hover: #7c3aed;
+            --sven-color: #3b82f6;
+            --sven-glow: rgba(59, 130, 246, 0.4);
+            --lina-color: #f97316;
+            --lina-glow: rgba(249, 115, 22, 0.4);
+            --bg: #020617;
+            --card-bg: rgba(15, 23, 42, 0.4);
+            --card-border: rgba(255, 255, 255, 0.05);
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(249, 115, 22, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 50% -20%, #1e1b4b 0%, var(--bg) 70%);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        header {
+            margin-top: 1.5rem;
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.3rem;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.05em;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 40px rgba(139, 92, 246, 0.15);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 0.3rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            padding: 1.2rem;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 28px;
+            padding: 1.5rem;
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Mode Buttons */
+        .mode-selection {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            background: rgba(15, 23, 42, 0.5);
+            padding: 6px;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+            width: fit-content;
+            margin: 0 auto 0.5rem auto;
+        }
+
+        .mode-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.5rem 1.2rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.8rem;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .mode-btn:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .mode-btn.active {
+            color: white;
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+        }
+
+        /* Arena Layout */
+        .arena-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.2rem;
+        }
+
+        .arena-layout {
+            display: flex;
+            gap: 1.5rem;
+            width: 100%;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .arena-layout {
+                flex-direction: column;
+            }
+        }
+
+        .team-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            width: 170px;
+            flex-shrink: 0;
+        }
+
+        .team-hero-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 16px;
+            padding: 0.6rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .team-hero-card.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.25);
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .team-hero-card.sven-theme.selected {
+            border-color: var(--sven-color);
+            box-shadow: 0 0 15px var(--sven-glow);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .team-hero-card.lina-theme.selected {
+            border-color: var(--lina-color);
+            box-shadow: 0 0 15px var(--lina-glow);
+            background: rgba(249, 115, 22, 0.05);
+        }
+
+        .team-hero-card.dead {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .team-hero-pic {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .team-hero-card.sven-theme .team-hero-pic {
+            border-color: var(--sven-color);
+        }
+
+        .team-hero-card.lina-theme .team-hero-pic {
+            border-color: var(--lina-color);
+        }
+
+        .team-hero-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            flex-grow: 1;
+        }
+
+        .team-hero-name {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .team-hero-hp-text {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .action-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            color: white;
+            font-size: 0.6rem;
+            font-weight: 800;
+            padding: 2px 5px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .action-badge.sven {
+            background: var(--sven-color);
+            box-shadow: 0 0 8px var(--sven-glow);
+        }
+
+        .action-badge.lina {
+            background: var(--lina-color);
+            box-shadow: 0 0 8px var(--lina-glow);
+        }
+
+        /* 3D Isometric Hologram Table */
+        .hologram-table {
+            position: relative;
+            perspective: 1000px;
+            width: fit-content;
+            display: flex;
+            justify-content: center;
+            padding: 1rem 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            gap: 6px;
+            width: 380px;
+            height: 380px;
+            background: rgba(8, 13, 28, 0.85);
+            padding: 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 
+                0 0 35px rgba(139, 92, 246, 0.06),
+                inset 0 0 25px rgba(0, 0, 0, 0.95);
+            transform: rotateX(12deg);
+            transform-style: preserve-3d;
+            transition: transform 0.5s ease;
+        }
+
+        .grid.shake {
+            animation: gridShake 0.4s ease-in-out;
+        }
+
+        @keyframes gridShake {
+            0%, 100% { transform: rotateX(12deg) translate(0, 0); }
+            20%, 60% { transform: rotateX(12deg) translate(-5px, 3px); }
+            40%, 80% { transform: rotateX(12deg) translate(5px, -3px); }
+        }
+
+        .cell {
+            background: rgba(255, 255, 255, 0.005);
+            border: 1px solid rgba(255, 255, 255, 0.02);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .cell.sven-cell {
+            background: rgba(59, 130, 246, 0.04);
+            border-color: rgba(59, 130, 246, 0.15);
+        }
+
+        .cell.lina-cell {
+            background: rgba(249, 115, 22, 0.04);
+            border-color: rgba(249, 115, 22, 0.15);
+        }
+
+        .hero-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translateZ(10px);
+            transform-style: preserve-3d;
+            position: relative;
+        }
+
+        .hero-container.selected-hero-token::after {
+            content: '';
+            position: absolute;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px dashed var(--primary);
+            animation: rotateDashed 4s linear infinite;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        @keyframes rotateDashed {
+            0% { transform: rotate(0deg) scale(0.9); }
+            100% { transform: rotate(360deg) scale(1.1); }
+        }
+
+        .mini-hp-bar {
+            position: absolute;
+            top: -6px;
+            left: 5%;
+            width: 90%;
+            height: 3px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 1px;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        .mini-hp-fill {
+            height: 100%;
+        }
+
+        .mini-hp-fill.sven { background: #3b82f6; }
+        .mini-hp-fill.lina { background: #f97316; }
+
+        /* Puppet Tokens */
+        .sven-puppet {
+            position: relative;
+            width: 36px;
+            height: 36px;
+            transform-style: preserve-3d;
+            animation: hoverToken 3s ease-in-out infinite alternate;
+        }
+
+        .sven-puppet .head {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-image: url('sven.png');
+            background-size: cover;
+            border: 2px solid var(--sven-color);
+            box-shadow: 0 0 10px var(--sven-glow);
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            z-index: 2;
+        }
+
+        .sven-puppet .sword {
+            width: 4px;
+            height: 22px;
+            background: linear-gradient(to top, var(--sven-color), #93c5fd);
+            border-radius: 3px;
+            position: absolute;
+            bottom: 4px;
+            right: -2px;
+            transform-origin: bottom center;
+            transform: rotate(25deg);
+            box-shadow: 0 0 6px var(--sven-color);
+            transition: transform 0.15s ease;
+            z-index: 3;
+        }
+
+        .sven-puppet.attacking .sword {
+            animation: svenSlash 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        @keyframes svenSlash {
+            0% { transform: rotate(25deg); }
+            30% { transform: rotate(-75deg); }
+            70% { transform: rotate(110deg); }
+            100% { transform: rotate(25deg); }
+        }
+
+        .lina-puppet {
+            position: relative;
+            width: 36px;
+            height: 36px;
+            transform-style: preserve-3d;
+            animation: hoverToken 3s ease-in-out infinite alternate-reverse;
+        }
+
+        .lina-puppet .head {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-image: url('lina.png');
+            background-size: cover;
+            border: 2px solid var(--lina-color);
+            box-shadow: 0 0 10px var(--lina-glow);
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            z-index: 2;
+        }
+
+        .lina-puppet .fireball {
+            width: 6px;
+            height: 6px;
+            background: radial-gradient(circle, #fff 0%, var(--lina-color) 70%);
+            border-radius: 50%;
+            position: absolute;
+            bottom: 5px;
+            left: -2px;
+            box-shadow: 0 0 8px var(--lina-color);
+            animation: orbitFire 1.5s linear infinite;
+            z-index: 3;
+        }
+
+        @keyframes orbitFire {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(10px, -8px); }
+            50% { transform: translate(22px, 0); }
+            75% { transform: translate(10px, 8px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        .lina-puppet.casting {
+            animation: linaCast 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        @keyframes linaCast {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2) rotate(15deg); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes hoverToken {
+            0% { transform: translateZ(3px) scale(0.98); }
+            100% { transform: translateZ(10px) scale(1.02); }
+        }
+
+        /* Projectiles */
+        .projectile {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            z-index: 100;
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .projectile.hammer {
+            background: radial-gradient(circle, #fff 0%, #60a5fa 50%, #1d4ed8 100%);
+            box-shadow: 0 0 15px #3b82f6;
+            animation: spinHammer 0.5s linear infinite;
+        }
+
+        @keyframes spinHammer {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .projectile.fire {
+            background: radial-gradient(circle, #fff 0%, #f97316 50%, #b91c1c 100%);
+            box-shadow: 0 0 15px #f97316;
+            animation: scaleFire 0.5s linear infinite alternate;
+        }
+
+        @keyframes scaleFire {
+            0% { transform: scale(0.9); }
+            100% { transform: scale(1.1); }
+        }
+
+        /* Token Slide Animations */
+        .slide-up { animation: slideUp 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
+        .slide-down { animation: slideDown 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
+        .slide-left { animation: slideLeft 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
+        .slide-right { animation: slideRight 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
+
+        @keyframes slideUp {
+            from { transform: translateY(45px); opacity: 0.5; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes slideDown {
+            from { transform: translateY(-45px); opacity: 0.5; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes slideLeft {
+            from { transform: translateX(45px); opacity: 0.5; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideRight {
+            from { transform: translateX(-45px); opacity: 0.5; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .dodge-anim {
+            animation: dodgeRoll 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        @keyframes dodgeRoll {
+            0% { transform: scale(1) translateX(0); }
+            30% { transform: scale(0.85) translateX(-15px) rotate(-20deg); }
+            70% { transform: scale(1.05) translateX(8px) rotate(5deg); }
+            100% { transform: scale(1) translateX(0) rotate(0); }
+        }
+
+        .floating-text {
+            position: absolute;
+            color: #fdba74;
+            font-weight: 800;
+            font-size: 0.8rem;
+            font-family: 'Share Tech Mono', monospace;
+            pointer-events: none;
+            z-index: 20;
+            animation: floatText 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            text-shadow: 0 0 8px rgba(249, 115, 22, 0.8);
+        }
+
+        @keyframes floatText {
+            0% { transform: translateY(0) translateZ(20px); opacity: 1; }
+            100% { transform: translateY(-35px) translateZ(20px); opacity: 0; }
+        }
+
+        .vfx-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Panels layout */
+        .controls-card {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+
+        .panel-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 800;
+            font-size: 1.15rem;
+            color: var(--text);
+            letter-spacing: -0.02em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.6rem;
+        }
+
+        .turn-phase {
+            background: rgba(139, 92, 246, 0.15);
+            color: #c084fc;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 8px;
+            letter-spacing: 0.05em;
+        }
+
+        .turn-phase.completed {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .hero-controls-header {
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .movement-row {
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Movement Pad D-Pad style */
+        .movement-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 38px);
+            grid-template-rows: repeat(3, 38px);
+            gap: 4px;
+            background: rgba(15, 23, 42, 0.4);
+            padding: 6px;
+            border-radius: 18px;
+            border: 1px solid var(--card-border);
+            width: fit-content;
+        }
+
+        .move-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .move-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .move-btn.selected {
+            background: var(--primary);
+            border-color: var(--primary-hover);
+            box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Action Buttons */
+        .action-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex-grow: 1;
+        }
+
+        .action-btn {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 0.5rem 0.8rem;
+            color: var(--text);
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .action-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .action-btn.selected {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.4);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.15);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .btn-label {
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+
+        .btn-cooldown {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        .actions-submit-container {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .submit-turn-btn {
+            flex-grow: 2;
+            background: linear-gradient(135deg, #7c3aed 0%, #c084fc 100%);
+            border: none;
+            color: white;
+            padding: 0.85rem;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(124, 58, 237, 0.25);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .submit-turn-btn:hover:not(:disabled) {
+            box-shadow: 0 12px 28px rgba(124, 58, 237, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .submit-turn-btn:disabled {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .reset-btn {
+            flex-grow: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            padding: 0.85rem;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Console Logs */
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.4rem;
+        }
+
+        .log-console {
+            background: #040815;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 18px;
+            height: 125px;
+            padding: 0.8rem;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+        }
+
+        .log-entry {
+            line-height: 1.3;
+        }
+
+        .turn-header { color: #34d399; font-weight: 700; }
+        .sven-log { color: #93c5fd; }
+        .lina-log { color: #fdbb2d; }
+        .dodge-log { color: #f472b6; }
+        .win-log { color: #f472b6; font-weight: 700; text-shadow: 0 0 8px rgba(244,114,182,0.3); }
+        .system-log { color: #c084fc; }
+
+        /* Persistence Details */
+        .durable-card {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+            padding: 1.2rem 1.8rem;
+            border-radius: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .durable-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+        }
+
+        .metrics-grid {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .metric-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-val {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 0 10px rgba(255,255,255,0.1);
+        }
+
+        .metric-title {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.15rem;
+        }
+
+        .crash-btn {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.3) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            padding: 0.8rem 1.6rem;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.15);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            text-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+        }
+
+        .crash-btn:hover {
+            box-shadow: 0 12px 28px rgba(239, 68, 68, 0.35);
+            transform: translateY(-1px);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.4) 100%);
+        }
+
+        /* Toast messaging */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(16, 185, 129, 0.95);
+            border: 1px solid rgba(16, 185, 129, 0.1);
+            color: white;
+            padding: 0.8rem 1.4rem;
+            border-radius: 14px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+            transform: translateY(150%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            font-weight: 600;
+            font-size: 0.85rem;
+            z-index: 100;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+        }
+
+        .toast.error {
+            background: rgba(239, 68, 68, 0.95);
+            border-color: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Custom health bars in list */
+        .list-hp-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 0.2rem;
+        }
+        .list-hp-fill {
+            height: 100%;
+        }
+        .list-hp-fill.sven { background: var(--sven-color); }
+        .list-hp-fill.lina { background: var(--lina-color); }
+
+        .pending-action-indicator {
+            font-size: 0.6rem;
+            color: #a78bfa;
+            font-weight: 700;
+            background: rgba(167, 139, 250, 0.15);
+            border: 1px solid rgba(167, 139, 250, 0.25);
+            padding: 1px 4px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        /* Tutorial styles */
+        .tutorial-highlight {
+            position: relative !important;
+            z-index: 1005 !important;
+            pointer-events: auto !important;
+            box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.8) !important;
+            outline: 2px solid var(--primary) !important;
+            transition: all 0.3s ease !important;
+        }
+    </style>
+</head>
+<body>
+    <header style="position: relative;">
+        <h1>5v5 DOTA WASM ARENA</h1>
+        <div class="subtitle">Wasmee Durable Execution Engine Demo</div>
+        <button onclick="startTutorial()" style="position: absolute; top: 0; right: 20px; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.25); color: white; border-radius: 50%; width: 32px; height: 32px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(139, 92, 246, 0.1); transition: all 0.3s ease;" title="Запустить обучение">?</button>
+    </header>
+
+    <div class="container">
+        <!-- Game Mode Selection -->
+        <div class="mode-selection">
+            <button class="mode-btn active" id="btn-mode-pve_radiant" onclick="setMode('pve_radiant')">Play Radiant (VS AI)</button>
+            <button class="mode-btn" id="btn-mode-pve_dire" onclick="setMode('pve_dire')">Play Dire (VS AI)</button>
+            <button class="mode-btn" id="btn-mode-pvp" onclick="setMode('pvp')">5v5 Hotseat</button>
+        </div>
+
+        <!-- PvP Role Selection for local simulation of multi-devices -->
+        <div id="pvp-role-selection" style="display:none; margin: -0.2rem auto 0.6rem auto; gap: 0.8rem; background: rgba(15, 23, 42, 0.4); padding: 4px; border-radius: 12px; width: fit-content; border: 1px solid var(--card-border);">
+            <button class="mode-btn active" id="btn-role-radiant" onclick="setPlayerRole('radiant')">Role: Radiant (Sven)</button>
+            <button class="mode-btn" id="btn-role-dire" onclick="setPlayerRole('dire')">Role: Dire (Lina)</button>
+        </div>
+
+        <!-- Left Column: Arena Grid and Stats -->
+        <div class="card arena-card">
+            <div class="panel-title" style="width: 100%;">
+                <span>Tactical 5v5 Sandbox</span>
+                <span class="turn-phase" id="game-status-badge">Active</span>
+            </div>
+
+            <!-- Team list, Board, Team list -->
+            <div class="arena-layout">
+                <!-- Radiant Team list -->
+                <div class="team-list" id="radiant-team-list">
+                    <!-- JS renders -->
+                </div>
+
+                <!-- Isometric Holographic Grid -->
+                <div class="hologram-table">
+                    <canvas class="vfx-layer" id="vfx-canvas" width="380" height="380"></canvas>
+                    <div class="grid" id="grid">
+                        <!-- Javascript renders cells -->
+                    </div>
+                </div>
+
+                <!-- Dire Team list -->
+                <div class="team-list" id="dire-team-list">
+                    <!-- JS renders -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Control Dashboard -->
+        <div class="card controls-card">
+            <div class="panel-title">
+                <span>Team Actions Core</span>
+                <span class="turn-phase" id="turn-indicator">Turn 1</span>
+            </div>
+
+            <!-- Single Contextual Control Panel -->
+            <div id="action-controls-section" class="sven-theme" style="display: flex; flex-direction: column; gap: 0.8rem; width: 100%;">
+                <div class="hero-controls-header" id="controls-panel-title" style="color: var(--sven-color);">Active Hero: Sven 1</div>
+                
+                <div class="movement-row">
+                    <!-- D-Pad -->
+                    <div class="movement-pad">
+                        <div></div>
+                        <button class="move-btn" onclick="selectMoveDirect('move_up')">▲</button>
+                        <div></div>
+                        <button class="move-btn" onclick="selectMoveDirect('move_left')">◀</button>
+                        <div style="background: rgba(0,0,0,0.3); border-radius: 4px;"></div>
+                        <button class="move-btn" onclick="selectMoveDirect('move_right')">▶</button>
+                        <div></div>
+                        <button class="move-btn" onclick="selectMoveDirect('move_down')">▼</button>
+                        <div></div>
+                    </div>
+                    
+                    <!-- Abilities -->
+                    <div class="action-group" id="spell-action-group">
+                        <!-- Renders dynamically depending on active hero type -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit turn and reset -->
+            <div class="actions-submit-container">
+                <button class="submit-turn-btn" id="submit-turn-btn" onclick="submitTurn()">Resolve Actions</button>
+                <button class="reset-btn" onclick="resetGame()">Reset Arena</button>
+            </div>
+
+            <!-- Logs -->
+            <div>
+                <div class="console-header">
+                    <span>Tactical State Logs</span>
+                    <span>System authoritative</span>
+                </div>
+                <div class="log-console" id="log-console"></div>
+            </div>
+        </div>
+
+        <!-- Persistence Panel -->
+        <div class="card durable-card">
+            <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                <div style="font-weight: 700; font-size: 1.1rem; color: #a78bfa; letter-spacing: -0.01em;">Wasmee Durable State Persist</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); max-width: 480px; line-height: 1.4;">
+                    Wasmee runs full guest linear memory page-dirty hashing and writes dirty snapshots to database after every turn. Click **Simulate Crash** to test instantaneous state restoration.
+                </div>
+            </div>
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <span class="metric-val" id="metric-snapshot">No</span>
+                    <span class="metric-title">Snapshot</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-val" id="metric-deltas">0</span>
+                    <span class="metric-title">Deltas</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-val" id="metric-version">0</span>
+                    <span class="metric-title">Version</span>
+                </div>
+            </div>
+            <button class="crash-btn" onclick="simulateCrash()">Simulate Crash</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Checkpoint saved!</div>
+
+    <!-- Disconnect Pause Overlay -->
+    <div id="pause-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.85); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); z-index:2000; align-items:center; justify-content:center; flex-direction:column; gap:1.5rem;">
+        <div style="font-family:'Share Tech Mono', monospace; font-size:2rem; font-weight:800; color:#ef4444; letter-spacing:0.05em; text-shadow:0 0 20px rgba(239,68,68,0.4);" class="shake">GAME PAUSED</div>
+        <div id="pause-message" style="font-size:0.95rem; color:var(--text); text-align:center; max-width:400px; line-height:1.5;">Ожидание подключения соперника...</div>
+        <div id="pause-timer" style="font-family:'Share Tech Mono', monospace; font-size:3rem; font-weight:700; color:#a78bfa; text-shadow:0 0 15px rgba(167,139,250,0.3);">180</div>
+        <button id="claim-victory-btn" onclick="claimVictory()" style="display:none; background:linear-gradient(135deg, #10b981 0%, #059669 100%); border:none; color:white; padding:0.9rem 1.8rem; border-radius:18px; font-weight:800; font-size:0.85rem; cursor:pointer; box-shadow:0 10px 25px rgba(16,185,129,0.3); transition:all 0.3s cubic-bezier(0.16, 1, 0.3, 1);">Присудить победу</button>
+    </div>
+
+    <!-- Interactive Tutorial -->
+    <div id="tutorial-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:transparent; z-index:1000; pointer-events:none;"></div>
+    <div id="tutorial-tooltip" style="display:none; position:absolute; background:#0b0f19; border:2px solid var(--primary); border-radius:18px; padding:1.2rem; width:280px; box-shadow:0 20px 40px rgba(0,0,0,0.8), 0 0 25px rgba(139,92,246,0.2); z-index:1001; transition:all 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+        <div style="font-weight:800; font-size:0.95rem; margin-bottom:0.5rem; color:#a78bfa;" id="tutorial-title">Шаг</div>
+        <div style="font-size:0.75rem; line-height:1.4; color:var(--text); margin-bottom:1rem;" id="tutorial-text">Описание...</div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <button onclick="skipTutorial()" style="background:transparent; border:none; color:var(--text-muted); font-size:0.75rem; cursor:pointer; font-weight:600;">Пропустить</button>
+            <button onclick="nextTutorialStep()" id="tutorial-next-btn" style="background:var(--primary); border:none; color:white; font-size:0.75rem; font-weight:700; padding:6px 12px; border-radius:8px; cursor:pointer; box-shadow:0 0 10px rgba(139,92,246,0.3);">Далее</button>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'pve_radiant';
+        let selectedHeroId = 1;
+        let pendingActions = {}; // hero_id -> action string
+        let gameState = {};
+        let playerRole = 'radiant';
+        
+        // Track previous positions for smooth transitions
+        let prevCoords = {};
+        
+        // Web Audio Synthesizer
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSynthSound(freqStart, freqEnd, duration, type = 'sine', noise = false) {
+            try {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                
+                if (noise) {
+                    const bufferSize = audioCtx.sampleRate * duration;
+                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+                    const noiseNode = audioCtx.createBufferSource();
+                    noiseNode.buffer = buffer;
+                    
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.setValueAtTime(freqStart, audioCtx.currentTime);
+                    filter.frequency.exponentialRampToValueAtTime(freqEnd, audioCtx.currentTime + duration);
+                    
+                    noiseNode.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                    
+                    noiseNode.start();
+                    return;
+                }
+
+                osc.frequency.setValueAtTime(freqStart, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freqEnd, audioCtx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (err) {
+                console.error("Audio error", err);
+            }
+        }
+
+        function playAudio(action) {
+            switch(action) {
+                case 'move':
+                    playSynthSound(400, 200, 0.15, 'triangle');
+                    break;
+                case 'attack_sven':
+                    playSynthSound(100, 40, 0.3, 'sawtooth', true); // metallic slash sound
+                    break;
+                case 'attack_lina':
+                    playSynthSound(600, 1000, 0.2, 'sine'); // fire shot
+                    break;
+                case 'storm_hammer':
+                    playSynthSound(300, 100, 0.5, 'square'); // hammer toss
+                    playSynthSound(80, 20, 0.4, 'sine', true);
+                    break;
+                case 'warcry':
+                    playSynthSound(150, 450, 0.4, 'sawtooth'); // horn blow
+                    break;
+                case 'dragon_slave':
+                    playSynthSound(200, 800, 0.4, 'triangle'); // flame wave
+                    break;
+                case 'laguna_blade':
+                    playSynthSound(100, 2000, 0.6, 'sawtooth'); // massive strike
+                    break;
+                case 'dodge':
+                    playSynthSound(300, 700, 0.2, 'triangle'); // swoosh
+                    break;
+                case 'crash':
+                    playSynthSound(1000, 50, 0.8, 'square', true); // bug glitch
+                    break;
+                case 'recover':
+                    playSynthSound(100, 800, 0.5, 'sine'); // restore signal
+                    break;
+            }
+        }
+
+        // VFX Particles Drawing
+        const canvas = document.getElementById('vfx-canvas');
+        const ctx = canvas.getContext('2d');
+        let activeVfx = [];
+
+        function addVfxBlast(x, y, color) {
+            activeVfx.push({
+                x: x,
+                y: y,
+                r: 5,
+                maxR: 35,
+                alpha: 1,
+                color: color
+            });
+        }
+
+        function drawVfx() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            activeVfx.forEach((v, index) => {
+                ctx.beginPath();
+                ctx.arc(v.x, v.y, v.r, 0, Math.PI * 2);
+                ctx.strokeStyle = v.color;
+                ctx.lineWidth = 3;
+                ctx.globalAlpha = v.alpha;
+                ctx.stroke();
+                
+                v.r += 2;
+                v.alpha -= 0.05;
+                if (v.alpha <= 0) {
+                    activeVfx.splice(index, 1);
+                }
+            });
+            ctx.globalAlpha = 1;
+            requestAnimationFrame(drawVfx);
+        }
+        requestAnimationFrame(drawVfx);
+
+        // Screen Shake
+        function triggerScreenShake() {
+            const gridEl = document.getElementById('grid');
+            gridEl.classList.add('shake');
+            setTimeout(() => {
+                gridEl.classList.remove('shake');
+            }, 450);
+        }
+
+        async function fetchState() {
+            try {
+                const res = await fetch(`/api/state?player=${playerRole}`);
+                gameState = await res.json();
+                
+                if (Object.keys(prevCoords).length === 0) {
+                    gameState.radiant.concat(gameState.dire).forEach(h => {
+                        prevCoords[h.id] = { x: h.x, y: h.y };
+                    });
+                }
+
+                updateUI();
+                await fetchMetrics();
+            } catch (err) {
+                console.error("Failed to fetch game state", err);
+            }
+        }
+
+        async function fetchMetrics() {
+            try {
+                const res = await fetch('/api/checkpoints');
+                const metrics = await res.json();
+                document.getElementById('metric-snapshot').innerText = metrics.has_snapshot ? "Yes" : "No";
+                document.getElementById('metric-deltas').innerText = metrics.deltas_count;
+                document.getElementById('metric-version').innerText = metrics.version;
+            } catch (err) {
+                console.error("Failed to fetch metrics", err);
+            }
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-mode-${mode}`).classList.add('active');
+            
+            pendingActions = {};
+            
+            if (mode === 'pvp') {
+                document.getElementById('pvp-role-selection').style.display = 'flex';
+                setPlayerRole('radiant');
+            } else {
+                document.getElementById('pvp-role-selection').style.display = 'none';
+                playerRole = (mode === 'pve_dire') ? 'dire' : 'radiant';
+                
+                const team = playerRole === 'radiant' ? gameState.radiant : gameState.dire;
+                if (team) {
+                    const firstAlive = team.find(h => h.hp > 0);
+                    if (firstAlive) selectedHeroId = firstAlive.id;
+                }
+            }
+
+            updateUI();
+            playAudio('move');
+            showToast(`Mode: ${document.getElementById(`btn-mode-${mode}`).innerText}`);
+        }
+
+        function setPlayerRole(role) {
+            playerRole = role;
+            document.querySelectorAll('#pvp-role-selection .mode-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById(`btn-role-${role}`);
+            if (activeBtn) activeBtn.classList.add('active');
+            
+            const team = role === 'radiant' ? gameState.radiant : gameState.dire;
+            if (team) {
+                const firstAlive = team.find(h => h.hp > 0);
+                if (firstAlive) selectedHeroId = firstAlive.id;
+            }
+            updateUI();
+        }
+
+        function selectHero(heroId) {
+            selectedHeroId = heroId;
+            updateUI();
+            playAudio('move');
+        }
+
+        function selectMoveDirect(direction) {
+            pendingActions[selectedHeroId] = direction;
+            autoAdvanceSelection();
+            updateUI();
+            playAudio('move');
+        }
+
+        function selectSpellDirect(spell) {
+            pendingActions[selectedHeroId] = spell;
+            autoAdvanceSelection();
+            updateUI();
+            playAudio('move');
+        }
+
+        function autoAdvanceSelection() {
+            const currentHero = getHeroById(selectedHeroId);
+            if (!currentHero) return;
+            const team = currentHero.is_radiant ? gameState.radiant : gameState.dire;
+            
+            // Find next alive hero of the same team without action chosen
+            const nextHero = team.find(h => h.hp > 0 && !pendingActions[h.id]);
+            if (nextHero) {
+                selectedHeroId = nextHero.id;
+            }
+        }
+
+        function getHeroById(id) {
+            if (!gameState || !gameState.radiant) return null;
+            return gameState.radiant.find(h => h.id === id) || gameState.dire.find(h => h.id === id);
+        }
+
+        function getCellCenter(x, y) {
+            const cellSize = (380 - 20 - 42) / 8; // 8x8 calculation
+            const gridPadding = 10;
+            const gap = 6;
+            
+            const px = gridPadding + x * (cellSize + gap) + cellSize/2;
+            const py = gridPadding + y * (cellSize + gap) + cellSize/2;
+            return { x: px, y: py };
+        }
+
+        function getNearestEnemyJs(hero, enemies) {
+            let nearest = null;
+            let minDist = Infinity;
+            enemies.forEach(e => {
+                if (e.hp > 0) {
+                    const d = Math.abs(hero.x - e.x) + Math.abs(hero.y - e.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearest = e;
+                    }
+                }
+            });
+            return nearest;
+        }
+
+        function spawnProjectile(fromX, fromY, toX, toY, type) {
+            const fromCell = document.getElementById(`cell-${fromX}-${fromY}`);
+            const toCell = document.getElementById(`cell-${toX}-${toY}`);
+            if (!fromCell || !toCell) return;
+
+            const fromRect = fromCell.getBoundingClientRect();
+            const toRect = toCell.getBoundingClientRect();
+            const tableRect = document.querySelector('.hologram-table').getBoundingClientRect();
+
+            const p = document.createElement('div');
+            p.className = `projectile ${type}`;
+            p.style.left = `${fromRect.left - tableRect.left + fromRect.width/2 - 7}px`;
+            p.style.top = `${fromRect.top - tableRect.top + fromRect.height/2 - 7}px`;
+            document.querySelector('.hologram-table').appendChild(p);
+
+            setTimeout(() => {
+                p.style.left = `${toRect.left - tableRect.left + toRect.width/2 - 7}px`;
+                p.style.top = `${toRect.top - tableRect.top + toRect.height/2 - 7}px`;
+            }, 30);
+
+            setTimeout(() => {
+                p.remove();
+            }, 450);
+        }
+
+        function updateUI() {
+            if (!gameState || !gameState.radiant) return;
+
+            // Update pause overlay
+            const pauseOverlay = document.getElementById('pause-overlay');
+            if (gameState.status === 'paused') {
+                pauseOverlay.style.display = 'flex';
+                const opposingTeam = gameState.paused_by === 'radiant' ? 'Radiant (Sven)' : 'Dire (Lina)';
+                document.getElementById('pause-message').innerText = `Игрок ${opposingTeam} отключился. Ожидаем подключения...`;
+                document.getElementById('pause-timer').innerText = gameState.pause_remaining;
+                
+                if (gameState.pause_remaining <= 0) {
+                    document.getElementById('pause-timer').style.display = 'none';
+                    document.getElementById('claim-victory-btn').style.display = 'block';
+                } else {
+                    document.getElementById('pause-timer').style.display = 'block';
+                    document.getElementById('claim-victory-btn').style.display = 'none';
+                }
+            } else {
+                pauseOverlay.style.display = 'none';
+            }
+
+            const activeHero = getHeroById(selectedHeroId);
+
+            // Render Side Lists
+            renderHeroList('radiant-team-list', gameState.radiant, 'sven-theme');
+            renderHeroList('dire-team-list', gameState.dire, 'lina-theme');
+
+            // Render Grid
+            const gridEl = document.getElementById('grid');
+            gridEl.innerHTML = '';
+
+            for (let y = 0; y < 8; y++) {
+                for (let x = 0; x < 8; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `cell-${x}-${y}`;
+                    
+                    const radHero = gameState.radiant.find(h => h.hp > 0 && h.x === x && h.y === y);
+                    const dirHero = gameState.dire.find(h => h.hp > 0 && h.x === x && h.y === y);
+
+                    if (radHero) {
+                        cell.className += ' sven-cell';
+                        const container = document.createElement('div');
+                        container.className = 'hero-container';
+                        if (radHero.id === selectedHeroId) {
+                            container.className += ' selected-hero-token';
+                        }
+                        
+                        let slideClass = getSlideClass(radHero);
+                        const puppet = document.createElement('div');
+                        puppet.className = `sven-puppet ${slideClass}`;
+                        puppet.id = `hero-token-${radHero.id}`;
+                        puppet.setAttribute('onclick', `selectHero(${radHero.id})`);
+                        puppet.style.cursor = 'pointer';
+                        puppet.innerHTML = `
+                            <div class="mini-hp-bar"><div class="mini-hp-fill sven" style="width:${(radHero.hp / radHero.max_hp) * 100}%;"></div></div>
+                            <div class="head"></div>
+                            <div class="sword"></div>
+                        `;
+                        container.appendChild(puppet);
+                        cell.appendChild(container);
+                    } else if (dirHero) {
+                        cell.className += ' lina-cell';
+                        const container = document.createElement('div');
+                        container.className = 'hero-container';
+                        if (dirHero.id === selectedHeroId) {
+                            container.className += ' selected-hero-token';
+                        }
+
+                        let slideClass = getSlideClass(dirHero);
+                        const puppet = document.createElement('div');
+                        puppet.className = `lina-puppet ${slideClass}`;
+                        puppet.id = `hero-token-${dirHero.id}`;
+                        puppet.setAttribute('onclick', `selectHero(${dirHero.id})`);
+                        puppet.style.cursor = 'pointer';
+                        puppet.innerHTML = `
+                            <div class="mini-hp-bar"><div class="mini-hp-fill lina" style="width:${(dirHero.hp / dirHero.max_hp) * 100}%;"></div></div>
+                            <div class="head"></div>
+                            <div class="fireball"></div>
+                        `;
+                        container.appendChild(puppet);
+                        cell.appendChild(container);
+                    }
+                    
+                    gridEl.appendChild(cell);
+                }
+            }
+
+            // Save positions for transition checking
+            gameState.radiant.concat(gameState.dire).forEach(h => {
+                prevCoords[h.id] = { x: h.x, y: h.y };
+            });
+
+            // Render Action Controls Panel depending on activeHero
+            renderControlsPanel(activeHero);
+
+            // Update submit button states
+            document.getElementById('turn-indicator').innerText = `Turn ${gameState.turn}`;
+            const badge = document.getElementById('game-status-badge');
+            badge.innerText = gameState.status.toUpperCase();
+            if (gameState.status === 'active') {
+                badge.className = 'turn-phase';
+                document.getElementById('submit-turn-btn').disabled = false;
+            } else {
+                badge.className = 'turn-phase completed';
+                document.getElementById('submit-turn-btn').disabled = true;
+            }
+
+            // Logs
+            const consoleEl = document.getElementById('log-console');
+            consoleEl.innerHTML = '';
+            gameState.log.forEach(entry => {
+                const logDiv = document.createElement('div');
+                logDiv.className = 'log-entry';
+                if (entry.startsWith('---')) {
+                    logDiv.className += ' turn-header';
+                } else if (entry.includes('[DODGE]')) {
+                    logDiv.className += ' dodge-log';
+                } else if (entry.includes('Sven')) {
+                    logDiv.className += ' sven-log';
+                } else if (entry.includes('Lina')) {
+                    logDiv.className += ' lina-log';
+                } else if (entry.includes('defeated') || entry.includes('destruction')) {
+                    logDiv.className += ' win-log';
+                } else {
+                    logDiv.className += ' system-log';
+                }
+                logDiv.innerText = entry;
+                consoleEl.appendChild(logDiv);
+            });
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function getSlideClass(hero) {
+            const prev = prevCoords[hero.id];
+            if (!prev) return '';
+            if (hero.x !== prev.x || hero.y !== prev.y) {
+                if (hero.x > prev.x) return 'slide-right';
+                else if (hero.x < prev.x) return 'slide-left';
+                else if (hero.y > prev.y) return 'slide-down';
+                else if (hero.y < prev.y) return 'slide-up';
+            }
+            return '';
+        }
+
+        function renderHeroList(elementId, heroes, theme) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            
+            heroes.forEach(h => {
+                const isSelected = h.id === selectedHeroId;
+                const act = pendingActions[h.id];
+                
+                const card = document.createElement('div');
+                card.className = `team-hero-card ${theme} ${isSelected ? 'selected' : ''} ${h.hp <= 0 ? 'dead' : ''}`;
+                card.setAttribute('onclick', `selectHero(${h.id})`);
+                
+                let avatarUrl = h.is_radiant ? 'sven.png' : 'lina.png';
+                
+                let actionBadgeHtml = '';
+                if (act && act !== 'none' && h.hp > 0) {
+                    let actionText = act.replace('move_', '→ ');
+                    actionBadgeHtml = `<span class="action-badge ${h.is_radiant ? 'sven' : 'lina'}">${actionText}</span>`;
+                }
+
+                card.innerHTML = `
+                    <div class="team-hero-pic" style="background-image: url('${avatarUrl}');"></div>
+                    <div class="team-hero-info">
+                        <div class="team-hero-name">${h.name}</div>
+                        <div class="team-hero-hp-text">${h.hp} / ${h.max_hp}</div>
+                        <div class="list-hp-container">
+                            <div class="list-hp-fill ${h.is_radiant ? 'sven' : 'lina'}" style="width:${(h.hp / h.max_hp) * 100}%;"></div>
+                        </div>
+                    </div>
+                    ${actionBadgeHtml}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderControlsPanel(hero) {
+            const panel = document.getElementById('action-controls-section');
+            const titleEl = document.getElementById('controls-panel-title');
+            const spellGroup = document.getElementById('spell-action-group');
+            
+            if (!hero) {
+                titleEl.innerText = "No Active Hero";
+                spellGroup.innerHTML = '';
+                return;
+            }
+
+            titleEl.innerText = `Active Hero: ${hero.name}`;
+            titleEl.style.color = hero.is_radiant ? 'var(--sven-color)' : 'var(--lina-color)';
+            panel.className = hero.is_radiant ? 'sven-theme' : 'lina-theme';
+            
+            const currAct = pendingActions[hero.id] || 'none';
+
+            // Check D-Pad selection highlights
+            document.querySelectorAll('.movement-pad .move-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            const dpads = document.querySelectorAll('.movement-pad .move-btn');
+            if (currAct === 'move_up') dpads[0].classList.add('selected');
+            if (currAct === 'move_left') dpads[1].classList.add('selected');
+            if (currAct === 'move_right') dpads[2].classList.add('selected');
+            if (currAct === 'move_down') dpads[3].classList.add('selected');
+
+            // Render spell buttons
+            if (hero.is_radiant) {
+                // Sven spells
+                spellGroup.innerHTML = `
+                    <button class="action-btn ${currAct === 'attack' ? 'selected' : ''}" onclick="selectSpellDirect('attack')">
+                        <span class="btn-label">Normal Attack</span>
+                        <span class="btn-cooldown">Melee (Dmg: 20)</span>
+                    </button>
+                    <button class="action-btn ${currAct === 'storm_hammer' ? 'selected' : ''}" ${hero.cooldowns.storm_hammer > 0 ? 'disabled' : ''} onclick="selectSpellDirect('storm_hammer')">
+                        <span class="btn-label">Storm Hammer</span>
+                        <span class="btn-cooldown">${hero.cooldowns.storm_hammer > 0 ? `CD: ${hero.cooldowns.storm_hammer}t` : 'Stun / Range 3 (CD 3)'}</span>
+                    </button>
+                    <button class="action-btn ${currAct === 'warcry' ? 'selected' : ''}" ${hero.cooldowns.warcry > 0 ? 'disabled' : ''} onclick="selectSpellDirect('warcry')">
+                        <span class="btn-label">Warcry</span>
+                        <span class="btn-cooldown">${hero.cooldowns.warcry > 0 ? `CD: ${hero.cooldowns.warcry}t` : 'Armor & Dash 2 (CD 4)'}</span>
+                    </button>
+                    <button class="action-btn ${currAct === 'none' ? 'selected' : ''}" onclick="selectSpellDirect('none')">
+                        <span class="btn-label">Pass</span>
+                        <span class="btn-cooldown">Skip turn</span>
+                    </button>
+                `;
+            } else {
+                // Lina spells
+                spellGroup.innerHTML = `
+                    <button class="action-btn ${currAct === 'attack' ? 'selected' : ''}" onclick="selectSpellDirect('attack')">
+                        <span class="btn-label">Normal Attack</span>
+                        <span class="btn-cooldown">Range 3 (Dmg: 12)</span>
+                    </button>
+                    <button class="action-btn ${currAct === 'dragon_slave' ? 'selected' : ''}" ${hero.cooldowns.dragon_slave > 0 ? 'disabled' : ''} onclick="selectSpellDirect('dragon_slave')">
+                        <span class="btn-label">Dragon Slave</span>
+                        <span class="btn-cooldown">${hero.cooldowns.dragon_slave > 0 ? `CD: ${hero.cooldowns.dragon_slave}t` : 'Range 4 (CD 2)'}</span>
+                    </button>
+                    <button class="action-btn ${currAct === 'laguna_blade' ? 'selected' : ''}" ${hero.cooldowns.laguna_blade > 0 ? 'disabled' : ''} onclick="selectSpellDirect('laguna_blade')">
+                        <span class="btn-label">Laguna Blade</span>
+                        <span class="btn-cooldown">${hero.cooldowns.laguna_blade > 0 ? `CD: ${hero.cooldowns.laguna_blade}t` : 'Range 3 (CD 5) Dmg: 45'}</span>
+                    </button>
+                    <button class="action-btn ${currAct === 'none' ? 'selected' : ''}" onclick="selectSpellDirect('none')">
+                        <span class="btn-label">Pass</span>
+                        <span class="btn-cooldown">Skip turn</span>
+                    </button>
+                `;
+            }
+        }
+
+        function triggerDodgeEffect(heroName) {
+            playAudio('dodge');
+            
+            // Search hero in state to get position
+            const hero = gameState.radiant.concat(gameState.dire).find(h => h.name === heroName);
+            if (!hero) return;
+
+            setTimeout(() => {
+                const token = document.getElementById(`hero-token-${hero.id}`);
+                if (token) {
+                    token.classList.add('dodge-anim');
+                    
+                    const cell = document.getElementById(`cell-${hero.x}-${hero.y}`);
+                    if (cell) {
+                        const floatText = document.createElement('div');
+                        floatText.className = 'floating-text';
+                        floatText.innerText = 'MISS!';
+                        cell.appendChild(floatText);
+                    }
+
+                    setTimeout(() => {
+                        token.classList.remove('dodge-anim');
+                    }, 500);
+                }
+            }, 50);
+        }
+
+        async function playTurnSequences(currState, nxtState, radActs, dirActs) {
+            // Spawn projectiles for cast actions
+            radActs.forEach(act => {
+                const h = currState.radiant.find(r => r.id === act.hero_id);
+                if (!h || h.hp <= 0) return;
+
+                if (act.action === 'attack') {
+                    playAudio('attack_sven');
+                    const t = getHeroToken(h.id);
+                    if (t) t.classList.add('attacking');
+                } else if (act.action === 'storm_hammer') {
+                    playAudio('storm_hammer');
+                    const t = getHeroToken(h.id);
+                    if (t) t.classList.add('attacking');
+                    
+                    const target = getNearestEnemyJs(h, currState.dire);
+                    if (target) {
+                        spawnProjectile(h.x, h.y, target.x, target.y, 'hammer');
+                    }
+                } else if (act.action === 'warcry') {
+                    playAudio('warcry');
+                } else if (act.action.startsWith('move_')) {
+                    playAudio('move');
+                }
+            });
+
+            dirActs.forEach(act => {
+                const h = currState.dire.find(d => d.id === act.hero_id);
+                if (!h || h.hp <= 0) return;
+
+                if (act.action === 'attack') {
+                    playAudio('attack_lina');
+                    const t = getHeroToken(h.id);
+                    if (t) t.classList.add('casting');
+                } else if (act.action === 'dragon_slave') {
+                    playAudio('dragon_slave');
+                    const t = getHeroToken(h.id);
+                    if (t) t.classList.add('casting');
+                    
+                    const target = getNearestEnemyJs(h, currState.radiant);
+                    if (target) {
+                        spawnProjectile(h.x, h.y, target.x, target.y, 'fire');
+                    }
+                } else if (act.action === 'laguna_blade') {
+                    playAudio('laguna_blade');
+                    const t = getHeroToken(h.id);
+                    if (t) t.classList.add('casting');
+                    
+                    const target = getNearestEnemyJs(h, currState.radiant);
+                    if (target) {
+                        spawnProjectile(h.x, h.y, target.x, target.y, 'fire');
+                    }
+                } else if (act.action.startsWith('move_')) {
+                    playAudio('move');
+                }
+            });
+
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Clean classes
+            currState.radiant.concat(currState.dire).forEach(h => {
+                const t = getHeroToken(h.id);
+                if (t) {
+                    t.classList.remove('attacking');
+                    t.classList.remove('casting');
+                }
+            });
+        }
+
+        function getHeroToken(id) {
+            return document.getElementById(`hero-token-${id}`);
+        }
+
+        async function submitTurn() {
+            // Apply blast VFX rings before resolving
+            gameState.radiant.concat(gameState.dire).forEach(h => {
+                if (h.hp <= 0) return;
+                const act = pendingActions[h.id];
+                if (!act) return;
+
+                if (act === 'storm_hammer' || act === 'attack') {
+                    const target = getNearestEnemyJs(h, h.is_radiant ? gameState.dire : gameState.radiant);
+                    if (target) {
+                        const pos = getCellCenter(target.x, target.y);
+                        addVfxBlast(pos.x, pos.y, h.is_radiant ? '#60a5fa' : '#f97316');
+                        triggerScreenShake();
+                    }
+                } else if (act === 'dragon_slave' || act === 'laguna_blade') {
+                    const target = getNearestEnemyJs(h, gameState.radiant);
+                    if (target) {
+                        const pos = getCellCenter(target.x, target.y);
+                        addVfxBlast(pos.x, pos.y, '#f97316');
+                        triggerScreenShake();
+                    }
+                }
+            });
+
+            // Map pending actions to arrays
+            const radiant_actions = gameState.radiant.map(h => ({
+                hero_id: h.id,
+                action: pendingActions[h.id] || 'none'
+            }));
+
+            const dire_actions = gameState.dire.map(h => ({
+                hero_id: h.id,
+                action: pendingActions[h.id] || 'none'
+            }));
+
+            const body = {
+                game_mode: currentMode,
+                radiant_actions: radiant_actions,
+                dire_actions: dire_actions
+            };
+
+            try {
+                const res = await fetch('/api/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                
+                if (res.ok) {
+                    const nextState = await res.json();
+                    
+                    // Play sequences
+                    await playTurnSequences(gameState, nextState, radiant_actions, dire_actions);
+
+                    // Check for dodges to animate
+                    const dodgers = [];
+                    nextState.log.forEach(entry => {
+                        if (entry.includes('[DODGE]')) {
+                            const match = entry.match(/\[DODGE\]\s+([\w\s]+)\s+dodged/);
+                            if (match) dodgers.push(match[1].trim());
+                        }
+                    });
+
+                    // Update local state
+                    gameState = nextState;
+                    updateUI();
+
+                    // Animate dodges
+                    dodgers.forEach(name => triggerDodgeEffect(name));
+
+                    showToast("Actions resolved. Checkpoint saved.");
+                    
+                    // Clear inputs
+                    pendingActions = {};
+                    
+                    // Reset selected active hero to the first alive hero of the player's team
+                    const playerTeam = currentMode === 'pve_dire' ? gameState.dire : gameState.radiant;
+                    const firstAlive = playerTeam.find(h => h.hp > 0);
+                    if (firstAlive) {
+                        selectedHeroId = firstAlive.id;
+                    }
+                    
+                    updateUI();
+                    await fetchMetrics();
+                } else {
+                    const text = await res.text();
+                    showToast("Execution Error: " + text, true);
+                }
+            } catch (err) {
+                showToast("Failed to connect to backend", true);
+            }
+        }
+
+        async function resetGame() {
+            try {
+                const res = await fetch('/api/reset', { method: 'POST' });
+                gameState = await res.json();
+                
+                document.getElementById('log-console').innerHTML = '';
+                
+                gameState.radiant.concat(gameState.dire).forEach(h => {
+                    prevCoords[h.id] = { x: h.x, y: h.y };
+                });
+
+                pendingActions = {};
+                
+                const playerTeam = currentMode === 'pve_dire' ? gameState.dire : gameState.radiant;
+                const firstAlive = playerTeam.find(h => h.hp > 0);
+                if (firstAlive) {
+                    selectedHeroId = firstAlive.id;
+                }
+
+                updateUI();
+                showToast("Arena reset. All state reinitialized.");
+                playAudio('recover');
+                await fetchMetrics();
+            } catch (err) {
+                showToast("Reset failed", true);
+            }
+        }
+
+        async function simulateCrash() {
+            try {
+                playAudio('crash');
+                triggerScreenShake();
+                
+                const res = await fetch('/api/crash', { method: 'POST' });
+                const data = await res.json();
+                
+                showToast("CRASH! Memory cache wiped.", true);
+                
+                document.getElementById('grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#ef4444;font-weight:700;margin-top:140px;letter-spacing:0.1em;font-family:\'Share Tech Mono\';">WARNING: SERVER STATE LOST</div>';
+                document.getElementById('submit-turn-btn').disabled = true;
+                
+                setTimeout(async () => {
+                    await fetchState();
+                    playAudio('recover');
+                    showToast("Restored from Wasmee checkpoint successfully!");
+                }, 1500);
+
+            } catch (err) {
+                showToast("Crash simulation failed", true);
+            }
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.className = 'toast';
+            if (isError) toast.className += ' error';
+            toast.className += ' show';
+            setTimeout(() => {
+                toast.className = toast.className.replace(' show', '');
+            }, 3000);
+        }
+
+        // Tutorial Guided Tour Logic
+        let currentTutorialStep = 0;
+        let isTutorialActive = false;
+
+        const tutorialSteps = [
+            {
+                title: "Добро пожаловать на Арену!",
+                text: "Это пошаговая тактическая игра 5v5. Все вычисления (HP, перемещения, способности, уклонения) происходят в защищенном WebAssembly. Цель — уничтожить команду соперника.",
+                element: () => document.querySelector('h1')
+            },
+            {
+                title: "Выбор режима игры",
+                text: "Здесь вы можете выбрать режим. По умолчанию включен 'Play Radiant (VS AI)' — вы управляете Свенами, а Лины делают ходы автоматически под управлением ИИ.",
+                element: () => document.querySelector('.mode-selection')
+            },
+            {
+                title: "Ваша команда (Radiant)",
+                text: "Слева отображаются ваши герои Sven 1..5. Вы можете выбрать любого героя, нажав на его карточку или на его токен на 3D-поле.",
+                element: () => document.getElementById('radiant-team-list')
+            },
+            {
+                title: "Панель управления действиями",
+                text: "Здесь вы отдаете команды выбранному герою: D-Pad задает направление движения, а кнопки справа активируют способности (Storm Hammer станит, Warcry дает броню и рывок на 2 клетки).",
+                element: () => document.getElementById('action-controls-section')
+            },
+            {
+                title: "Планирование хода на поле 8x8",
+                text: "Когда вы отдаете приказ одному герою, фокус автоматически переходит к следующему. Спланируйте ход для всей команды Sven перед тем, как идти в бой!",
+                element: () => document.getElementById('grid')
+            },
+            {
+                title: "Запуск сражения (Resolve)",
+                text: "Когда все приказы розданы, нажмите 'Resolve Actions'. Ход рассчитается на сервере Wasmee, проиграются звуки и анимации снарядов/ударов, и игра перейдет на следующий ход.",
+                element: () => document.getElementById('submit-turn-btn')
+            },
+            {
+                title: "Персистентность и краш-тесты",
+                text: "После каждого хода Wasmee делает мгновенный чекпоинт. Нажмите 'Simulate Crash' для симуляции падения сервера — игра мгновенно и без потерь восстановится с того же места!",
+                element: () => document.querySelector('.durable-card')
+            }
+        ];
+
+        function startTutorial() {
+            isTutorialActive = true;
+            currentTutorialStep = 0;
+            showTutorialStep();
+        }
+
+        function showTutorialStep() {
+            document.querySelectorAll('.tutorial-highlight').forEach(el => {
+                el.classList.remove('tutorial-highlight');
+            });
+
+            if (!isTutorialActive || currentTutorialStep >= tutorialSteps.length) {
+                endTutorial();
+                return;
+            }
+
+            const step = tutorialSteps[currentTutorialStep];
+            const targetEl = step.element();
+            
+            if (!targetEl) {
+                currentTutorialStep++;
+                showTutorialStep();
+                return;
+            }
+
+            targetEl.classList.add('tutorial-highlight');
+
+            document.getElementById('tutorial-title').innerText = `${currentTutorialStep + 1}/${tutorialSteps.length}: ${step.title}`;
+            document.getElementById('tutorial-text').innerText = step.text;
+            
+            const nextBtn = document.getElementById('tutorial-next-btn');
+            if (currentTutorialStep === tutorialSteps.length - 1) {
+                nextBtn.innerText = "Начать игру";
+            } else {
+                nextBtn.innerText = "Далее";
+            }
+
+            positionTooltip(targetEl);
+        }
+
+        function positionTooltip(element) {
+            const rect = element.getBoundingClientRect();
+            const tooltip = document.getElementById('tutorial-tooltip');
+            tooltip.style.display = 'block';
+            
+            let top = rect.bottom + window.scrollY + 12;
+            let left = rect.left + window.scrollX + rect.width / 2 - 140;
+            
+            if (left < 10) left = 10;
+            if (left + 290 > window.innerWidth) left = window.innerWidth - 290;
+            
+            if (top + 160 > window.innerHeight + window.scrollY) {
+                top = rect.top + window.scrollY - 160 - 12;
+                if (top < 10) top = 10;
+            }
+            
+            tooltip.style.top = `${top}px`;
+            tooltip.style.left = `${left}px`;
+            
+            const overlay = document.getElementById('tutorial-overlay');
+            overlay.style.display = 'block';
+        }
+
+        function nextTutorialStep() {
+            currentTutorialStep++;
+            showTutorialStep();
+        }
+
+        function skipTutorial() {
+            endTutorial();
+        }
+
+        function endTutorial() {
+            isTutorialActive = false;
+            document.querySelectorAll('.tutorial-highlight').forEach(el => {
+                el.classList.remove('tutorial-highlight');
+            });
+            document.getElementById('tutorial-tooltip').style.display = 'none';
+            document.getElementById('tutorial-overlay').style.display = 'none';
+            localStorage.setItem('dota_arena_tutorial_completed', 'true');
+        }
+
+        async function claimVictory() {
+            try {
+                const res = await fetch(`/api/claim-victory`, { method: 'POST' });
+                if (res.ok) {
+                    gameState = await res.json();
+                    document.getElementById('pause-overlay').style.display = 'none';
+                    updateUI();
+                    showToast("Победа присуждена!");
+                } else {
+                    const text = await res.text();
+                    showToast("Ошибка: " + text, true);
+                }
+            } catch (err) {
+                showToast("Не удалось подключиться к серверу", true);
+            }
+        }
+
+        // Periodic Polling for Reconnection Sync
+        setInterval(() => {
+            if (gameState && gameState.status !== 'won_radiant' && gameState.status !== 'won_dire' && gameState.status !== 'draw') {
+                fetchState();
+            }
+        }, 2000);
+
+        // Init
+        fetchState();
+
+        // Auto trigger tutorial on first run
+        setTimeout(() => {
+            if (!localStorage.getItem('dota_arena_tutorial_completed')) {
+                startTutorial();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
