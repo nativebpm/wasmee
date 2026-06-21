@@ -24,8 +24,8 @@ export const translations: TranslationDict = {
     ru: "Блог"
   },
   "nav-use-cases": {
-    en: "Use Cases",
-    ru: "Примеры использования"
+    en: "Products",
+    ru: "Продукты"
   },
   "nav-get-started": {
     en: "Get Started",
@@ -305,36 +305,36 @@ export const translations: TranslationDict = {
   },
 
   "usecases-title": {
-    en: "Real-World Use Cases",
-    ru: "Примеры использования"
+    en: "Wasmee Products",
+    ru: "Продукты Wasmee"
   },
   "usecases-subtitle": {
-    en: "How organizations and developers leverage Wasmee for high-density, secure executions.",
-    ru: "Как организации и разработчики используют Wasmee для высокоплотных и безопасных вычислений."
+    en: "A suite of resilient runtime engines tailored for workflow orchestration, low-latency gaming, and enterprise service desks.",
+    ru: "Набор отказоустойчивых движков выполнения, разработанных для оркестрации процессов, геймдева и сервис-десков."
   },
   "usecase-title-business": {
-    en: "Business & Workflow Automation",
-    ru: "Автоматизация бизнеса и процессов"
+    en: "Wasmee Workflow",
+    ru: "Wasmee Workflow"
   },
   "usecase-desc-business": {
-    en: "Business automation platforms use Wasmee to execute custom business logic, untrusted script tasks, and declarative workflow transitions inside a secure, gas-metered sandbox with durable execution state.",
-    ru: "Платформы автоматизации бизнеса используют Wasmee для выполнения пользовательской бизнес-логики, untrusted задач-сценариев (script tasks) и декларативных переходов процессов в безопасной sandboxed-среде с учетом газа (gas-metered) и Durable-состоянием выполнения (durable execution state)."
+    en: "A high-performance business process automation and task tracking engine supporting everything from simple Todo lists to advanced Kanban boards inside a secure, gas-metered sandbox.",
+    ru: "Высокопроизводительный движок автоматизации бизнес-процессов и отслеживания задач, поддерживающий любые решения — от простых списков дел до продвинутых Kanban-досок в безопасной песочнице с лимитом газа."
   },
   "usecase-title-gamedev": {
-    en: "Game Development & Resilient Multiplayer",
-    ru: "Game Development & Resilient Multiplayer"
+    en: "Wasmee Game",
+    ru: "Wasmee Game"
   },
   "usecase-desc-gamedev": {
-    en: "In multiplayer game development, Wasmee acts as a lightweight, state-synchronized engine. If a player disconnects or the host node crashes, Wasmee instantly restores the authoritative game memory state from the last page checkpoint, ensuring zero-overhead reconnection and fair play.",
-    ru: "В разработке мультиплеерных игр Wasmee выступает в роли легковесного движка с синхронизацией состояния. При отключении игрока или сбое хост-сервера Wasmee мгновенно восстанавливает авторитетное состояние игровой памяти из последнего чекпоинта (page checkpoint), гарантируя быстрое переподключение без накладных расходов (zero-overhead) и честную игру."
+    en: "A lightweight, state-synchronized engine for multiplayer games. If a host crashes, it instantly restores authoritative memory from the last page checkpoint, ensuring zero-overhead reconnection.",
+    ru: "Легковесный движок с синхронизацией состояния для многопользовательских игр. При сбое сервера мгновенно восстанавливает память из последнего чекпоинта, гарантируя быстрое переподключение."
   },
   "usecase-title-sync": {
-    en: "Frontend & Backend State Synchronization",
-    ru: "Синхронизация состояния Frontend и Backend"
+    en: "Wasmee ServiceDesk",
+    ru: "Wasmee ServiceDesk"
   },
   "usecase-desc-sync": {
-    en: "Wasmee acts as an authoritative, lightweight state store for multi-client applications. It enables seamless state synchronization between interactive frontends and backend services by persisting the exact virtual machine memory checkpoints, eliminating complex cache layers and synchronization protocols.",
-    ru: "Wasmee выступает в качестве авторитетного легковесного хранилища состояния (state store) для мультиклиентских приложений. Он обеспечивает бесшовную синхронизацию состояния между интерактивными фронтендами и бэкенд-сервисами путем сохранения точных чекпоинтов памяти виртуальной машины, устраняя необходимость в сложных кэш-слоях и протоколах синхронизации."
+    en: "An enterprise ITIL incident management engine with built-in SLA tracking, automatic priority escalation, and role-based authorization (AuthN/AuthZ) verified directly at the sandboxed Wasm layer.",
+    ru: "Корпоративный движок управления инцидентами ITIL со встроенным контролем SLA, авто-эскалацией приоритетов и ролевой авторизацией (AuthN/AuthZ), проверяемой на уровне Wasm."
   },
 
   // CTA Section

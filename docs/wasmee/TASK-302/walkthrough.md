@@ -27,6 +27,12 @@ Created a responsive, premium HTML frontend at [index.html](file:///Users/user/g
 - Audit history timeline showing SLA breaches and priority escalations.
 - Wasmee execution logger showing JIT hot-reloads and checkpoint saves.
 
+### 4. Wasmee Homepage Product Showcase
+Updated [index.html](file:///Users/user/gitlab.com/wasmee/wasmee/site/index.html) and [translations.ts](file:///Users/user/gitlab.com/wasmee/wasmee/site/src/translations.ts) on the landing page to transform the use cases section into a showcase of the three core products of the Wasmee ecosystem:
+- **Wasmee Workflow** (Process automation for tasks, Todos, and Kanban boards).
+- **Wasmee Game** (Low-latency state-synchronized engine for multiplayer reconnectivity).
+- **Wasmee ServiceDesk** (Incident ticket desk with SLA tracking and role authorization).
+
 ---
 
 ## Validation Results
