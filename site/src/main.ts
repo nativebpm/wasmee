@@ -755,61 +755,567 @@ document.querySelectorAll('[data-switch-lang]').forEach(btn => {
   });
 });
 
-// Bind clickable product cards to Live Fiddle presets
+// (Live Fiddle preset binding removed in favor of Interactive Demo Modal)
+
+// --- Live Wasm & Host Simulator for Browser Demos ---
+interface SimInstance {
+  id: string;
+  type: string; // "workflow", "game", "servicedesk"
+  waiting_nodes: string[];
+  variables: any;
+  completed: boolean;
+  history: string[];
+  version: number;
+  created_at: number; // ms
+  last_tick: number; // ms
+}
+
+let simInstances: SimInstance[] = [];
+let activeDemoProduct = '';
+let activeDemoInstanceId = '';
+let demoRole = 'Customer';
+
+function logDemoConsole(msg: string, type: 'info' | 'success' | 'warn' | 'error' = 'info') {
+  const consoleBox = document.getElementById('demo-console-logs');
+  if (!consoleBox) return;
+  const time = new Date().toLocaleTimeString();
+  let color = '#60a5fa'; // blue
+  if (type === 'success') color = '#34d399'; // green
+  if (type === 'warn') color = '#fbbf24'; // orange
+  if (type === 'error') color = '#f87171'; // red
+  consoleBox.innerHTML += `\n<span style="color:var(--text-muted); margin-right:0.5rem;">[${time}]</span><span style="color:${color};">${msg}</span>`;
+  consoleBox.scrollTop = consoleBox.scrollHeight;
+}
+
+function updateDemoVarsView(vars: any) {
+  const varsView = document.getElementById('demo-vars-view');
+  if (varsView) {
+    varsView.textContent = JSON.stringify(vars, null, 2);
+  }
+}
+
+// Bind product cards to open the Interactive Demo Modal
 const productCards = document.querySelectorAll('.usecase-card');
+const demoModal = document.getElementById('demo-modal');
+const demoCloseBtn = document.getElementById('demo-close-btn');
+const demoRoleSelect = document.getElementById('demo-role-select') as HTMLSelectElement;
+const demoRoleBox = document.getElementById('demo-role-box');
+
 productCards.forEach(card => {
   card.addEventListener('click', () => {
     const product = card.getAttribute('data-product');
-    if (!product) return;
+    if (!product || !demoModal) return;
 
-    // Switch to Fiddle tab
-    const fiddleTabBtn = document.querySelector('.lang-btn[data-lang="fiddle"]') as HTMLButtonElement;
-    if (fiddleTabBtn) {
-      fiddleTabBtn.click();
-    }
+    activeDemoProduct = product;
+    activeDemoInstanceId = '';
+    demoModal.classList.add('active');
 
-    // Load template config
-    const repoInput = document.getElementById('fiddle-repo') as HTMLInputElement;
-    const refInput = document.getElementById('fiddle-ref') as HTMLInputElement;
-    const pathInput = document.getElementById('fiddle-path') as HTMLInputElement;
+    // Reset console and variables
+    const consoleBox = document.getElementById('demo-console-logs');
+    if (consoleBox) consoleBox.innerHTML = '--- Wasmee Wasmtime JIT engine pre-warmed. Sandbox idle. ---';
+    updateDemoVarsView({});
 
-    if (repoInput) repoInput.value = 'https://github.com/nativebpm/wasmee';
-    if (refInput) refInput.value = 'main';
+    const titleEl = document.getElementById('demo-product-title');
+    const areaTitle = document.getElementById('demo-area-title');
+    const createBtn = document.getElementById('demo-create-btn');
 
-    let payload = {};
     if (product === 'workflow') {
-      if (pathInput) pathInput.value = 'examples/todo-list/main.go';
-      payload = {
-        todo_item: 'Task description from Workflow Product',
-        priority: 'High',
-        todo_item_completed: false
-      };
+      if (titleEl) titleEl.textContent = 'Wasmee Workflow Demo';
+      if (areaTitle) areaTitle.textContent = 'Todo List Workflows';
+      if (createBtn) createBtn.textContent = '+ Create Todo Flow';
+      if (demoRoleBox) demoRoleBox.style.display = 'none';
+      logDemoConsole('Wasmee Workflow sandbox environment loaded.', 'success');
     } else if (product === 'game') {
-      if (pathInput) pathInput.value = 'examples/dota-arena/main.go';
-      payload = {
-        action: 'play_turn',
-        game_mode: 'pvp'
-      };
+      if (titleEl) titleEl.textContent = 'Wasmee Game Demo (Sven vs Lina)';
+      if (areaTitle) areaTitle.textContent = 'Resilient Arena Combat';
+      if (createBtn) createBtn.textContent = '+ Start Combat';
+      if (demoRoleBox) demoRoleBox.style.display = 'none';
+      logDemoConsole('Wasmee Game sandbox environment loaded.', 'success');
     } else if (product === 'servicedesk') {
-      if (pathInput) pathInput.value = 'examples/servicedesk/main.go';
-      payload = {
-        title: 'Incident ticket from ServiceDesk Product',
-        description: 'System database connection timeout.',
-        priority: 'Critical'
-      };
+      if (titleEl) titleEl.textContent = 'Wasmee ServiceDesk Demo';
+      if (areaTitle) areaTitle.textContent = 'ITIL Incident Tickets';
+      if (createBtn) createBtn.textContent = '+ Report Incident';
+      if (demoRoleBox) demoRoleBox.style.display = 'flex';
+      logDemoConsole('Wasmee ServiceDesk sandbox environment loaded with role-based auth.', 'success');
     }
 
-    if (payloadEditor) {
-      payloadEditor.setValue(JSON.stringify(payload, null, 2));
-    }
-
-    // Scroll to Fiddle / Code section
-    const codeSection = document.getElementById('code');
-    if (codeSection) {
-      codeSection.scrollIntoView({ behavior: 'smooth' });
-    }
+    renderDemoItems();
+    clearDemoForm();
   });
 });
+
+if (demoCloseBtn && demoModal) {
+  demoCloseBtn.addEventListener('click', () => {
+    demoModal.classList.remove('active');
+  });
+}
+
+if (demoRoleSelect) {
+  demoRoleSelect.addEventListener('change', () => {
+    demoRole = demoRoleSelect.value;
+    logDemoConsole(`Demo role switched to: ${demoRole}`, 'success');
+    if (activeDemoInstanceId) {
+      selectDemoInstance(activeDemoInstanceId);
+    }
+  });
+}
+
+// Create new flow
+const demoCreateBtn = document.getElementById('demo-create-btn');
+if (demoCreateBtn) {
+  demoCreateBtn.addEventListener('click', () => {
+    const id = `inst-${Math.random().toString(36).substring(7)}`;
+    logDemoConsole(`Host: Initializing Wasm sandbox for instance ${id.substring(0, 5)}...`);
+    logDemoConsole('Wasmee: Loading module guest.wasm from cache (hash validation: OK).', 'success');
+    logDemoConsole('Wasmee: Linker compiled, memory bounds allocated (32MB).');
+
+    let variables: any = {};
+    let waiting: string[] = [];
+
+    if (activeDemoProduct === 'workflow') {
+      const desc = prompt('Enter Todo description:', 'Task description from Workflow Product');
+      if (!desc) return;
+      variables = { todo_item: desc, priority: 'Medium' };
+      waiting = ['add_todo'];
+      logDemoConsole("Wasmee: Running entrypoint 'execute' with workflow type: workflow...");
+    } else if (activeDemoProduct === 'game') {
+      variables = { sven_hp: 100, lina_hp: 100, sven_stunned: false, lina_cooldown: 0, turn: 0 };
+      waiting = ['play_turn'];
+      logDemoConsole("Wasmee: Running entrypoint 'execute' with workflow type: game...");
+    } else if (activeDemoProduct === 'servicedesk') {
+      const title = prompt('Enter Incident Title:', 'System database connection timeout.');
+      if (!title) return;
+      const desc = prompt('Enter Incident Description:', 'Unable to connect to PostgreSQL from node-3');
+      const priority = prompt('Enter Priority (Low, Medium, High, Critical):', 'Medium') || 'Medium';
+      variables = { title, description: desc, priority, status: 'New' };
+      waiting = ['create_incident'];
+      logDemoConsole("Wasmee: Running entrypoint 'execute' with workflow type: servicedesk...");
+    }
+
+    logDemoConsole('Wasmee: Checkpoint triggered: scanning 512 linear memory pages...');
+    logDemoConsole('Wasmee: Saved snapshot checkpoint (Version 1).', 'success');
+
+    const newInst: SimInstance = {
+      id,
+      type: activeDemoProduct,
+      waiting_nodes: waiting,
+      variables,
+      completed: false,
+      history: ['Instance created. Base checkpoint Version 1 saved.'],
+      version: 1,
+      created_at: Date.now(),
+      last_tick: Date.now()
+    };
+
+    simInstances.push(newInst);
+    renderDemoItems();
+    selectDemoInstance(id);
+  });
+}
+
+function renderDemoItems() {
+  const container = document.getElementById('demo-items-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const activeItems = simInstances.filter(i => i.type === activeDemoProduct);
+  if (activeItems.length === 0) {
+    container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-top: 2rem;">No active items. Create one to start.</p>';
+    return;
+  }
+
+  activeItems.forEach(inst => {
+    const card = document.createElement('div');
+    card.className = `demo-card ${inst.id === activeDemoInstanceId ? 'active' : ''}`;
+    card.onclick = () => selectDemoInstance(inst.id);
+
+    if (inst.type === 'workflow') {
+      const desc = inst.variables.todo_item || 'Todo';
+      card.innerHTML = `
+        <div style="font-weight:600; color:#fff;">${desc}</div>
+        <div style="font-size:0.75rem; color:var(--text-muted); display:flex; justify-content:space-between; margin-top:0.5rem;">
+          <span>Status: ${inst.completed ? 'Completed' : 'Pending'}</span>
+          <span>Version: ${inst.version}</span>
+        </div>
+      `;
+    } else if (inst.type === 'game') {
+      card.innerHTML = `
+        <div style="font-weight:600; color:#fff;">Sven vs Lina Arena</div>
+        <div style="font-size:0.75rem; color:var(--text-muted); display:flex; gap: 1rem; margin-top:0.5rem;">
+          <span>Sven HP: ${inst.variables.sven_hp}</span>
+          <span>Lina HP: ${inst.variables.lina_hp}</span>
+          <span>Turn: ${inst.variables.turn}</span>
+        </div>
+      `;
+    } else if (inst.type === 'servicedesk') {
+      const title = inst.variables.title || 'Incident';
+      const status = inst.variables.status || 'New';
+      const priority = inst.variables.priority || 'Medium';
+      
+      let timerText = 'Resolved';
+      let fillPct = 100;
+      let barColor = 'var(--success)';
+
+      if (!inst.completed) {
+        const isNew = status === 'New';
+        const limitDur = isNew ? 60000 : 180000; // simulated durations (60s reaction, 180s resolution)
+        const elapsed = Date.now() - inst.created_at;
+        const remaining = limitDur - elapsed;
+
+        if (remaining <= 0) {
+          fillPct = 100;
+          barColor = 'var(--danger)';
+          timerText = isNew ? 'Reaction SLA Breached' : 'Resolution SLA Breached';
+        } else {
+          fillPct = (remaining / limitDur) * 100;
+          barColor = fillPct < 25 ? 'var(--danger)' : (fillPct < 50 ? 'var(--warning)' : 'var(--success)');
+          timerText = `${Math.ceil(remaining / 1000)}s left`;
+        }
+      }
+
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-weight:600; color:#fff;">${title}</span>
+          <span class="incident-status-badge status-${status.toLowerCase()}" style="font-size:0.7rem; padding:0.15rem 0.4rem;">${status}</span>
+        </div>
+        <div class="demo-sla-bar">
+          <div class="demo-sla-fill" style="width:${fillPct}%; background:${barColor};"></div>
+        </div>
+        <div style="font-size:0.75rem; color:var(--text-muted); display:flex; justify-content:space-between; margin-top:0.25rem;">
+          <span>Priority: ${priority}</span>
+          <span>SLA: ${timerText}</span>
+        </div>
+      `;
+    }
+
+    container.appendChild(card);
+  });
+}
+
+function selectDemoInstance(id: string) {
+  activeDemoInstanceId = id;
+  renderDemoItems();
+  const inst = simInstances.find(i => i.id === id);
+  if (!inst) return;
+
+  updateDemoVarsView(inst.variables);
+
+  // Render operations form based on the current state node
+  const formBox = document.getElementById('demo-action-form');
+  if (!formBox) return;
+
+  if (inst.completed) {
+    formBox.innerHTML = '<p style="color:var(--success); font-weight:600; text-align:center; margin-top:1.5rem;">✓ Workflow Completed Successfully</p>';
+    return;
+  }
+
+  const activeNode = inst.waiting_nodes[0];
+  let formHTML = '';
+
+  if (inst.type === 'workflow') {
+    if (activeNode === 'add_todo') {
+      formHTML = `
+        <form onsubmit="event.preventDefault(); submitDemoStep('${id}', 'add_todo');">
+          <div class="demo-form-group">
+            <label>Todo Item</label>
+            <input type="text" name="todo_item" class="demo-input" value="${inst.variables.todo_item || ''}" required>
+          </div>
+          <div class="demo-form-group">
+            <label>Priority</label>
+            <select name="priority" class="demo-input">
+              <option value="Low" ${inst.variables.priority === 'Low' ? 'selected' : ''}>Low</option>
+              <option value="Medium" ${inst.variables.priority === 'Medium' ? 'selected' : ''}>Medium</option>
+              <option value="High" ${inst.variables.priority === 'High' ? 'selected' : ''}>High</option>
+            </select>
+          </div>
+          <button type="submit" class="demo-btn" style="width:100%;">Create Task Step</button>
+        </form>
+      `;
+    } else if (activeNode === 'complete_todo') {
+      formHTML = `
+        <form onsubmit="event.preventDefault(); submitDemoStep('${id}', 'complete_todo');">
+          <div class="demo-form-group">
+            <label>Todo Item (Read Only)</label>
+            <input type="text" class="demo-input" value="${inst.variables.todo_item || ''}" readonly>
+          </div>
+          <div class="demo-form-group">
+            <label class="demo-checkbox">
+              <input type="checkbox" name="todo_item_completed" required>
+              <span>Mark as Completed</span>
+            </label>
+          </div>
+          <button type="submit" class="demo-btn" style="width:100%;">Complete Workflow</button>
+        </form>
+      `;
+    }
+  } else if (inst.type === 'game') {
+    formHTML = `
+      <div style="display:flex; flex-direction:column; gap:0.75rem;">
+        <p style="font-size:0.8rem; color:var(--text-muted);">Simulate Sven and Lina combat turns. Wasm sandbox tracks HP and cooldowns.</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+          <button onclick="playGameTurn('${id}', 'StormHammer')" class="demo-btn">Storm Hammer</button>
+          <button onclick="playGameTurn('${id}', 'Warcry')" class="demo-btn" style="background:linear-gradient(135deg, #f59e0b, #d97706);">Warcry</button>
+          <button onclick="playGameTurn('${id}', 'DragonSlave')" class="demo-btn" style="background:linear-gradient(135deg, #ef4444, #dc2626);">Dragon Slave</button>
+          <button onclick="playGameTurn('${id}', 'LagunaBlade')" class="demo-btn" style="background:linear-gradient(135deg, #ec4899, #db2777);">Laguna Blade</button>
+        </div>
+        <button onclick="simulateGameCrash('${id}')" class="demo-btn demo-btn-secondary" style="margin-top:0.5rem;">💥 Crash & Restore</button>
+      </div>
+    `;
+  } else if (inst.type === 'servicedesk') {
+    if (activeNode === 'create_incident') {
+      formHTML = `
+        <form onsubmit="event.preventDefault(); submitDemoStep('${id}', 'create_incident');">
+          <div class="demo-form-group">
+            <label>Incident Title</label>
+            <input type="text" name="title" class="demo-input" value="${inst.variables.title || ''}" required>
+          </div>
+          <div class="demo-form-group">
+            <label>Incident Description</label>
+            <input type="text" name="description" class="demo-input" value="${inst.variables.description || ''}" required>
+          </div>
+          <div class="demo-form-group">
+            <label>Priority</label>
+            <select name="priority" class="demo-input">
+              <option value="Low" ${inst.variables.priority === 'Low' ? 'selected' : ''}>Low</option>
+              <option value="Medium" ${inst.variables.priority === 'Medium' ? 'selected' : ''}>Medium</option>
+              <option value="High" ${inst.variables.priority === 'High' ? 'selected' : ''}>High</option>
+              <option value="Critical" ${inst.variables.priority === 'Critical' ? 'selected' : ''}>Critical</option>
+            </select>
+          </div>
+          <button type="submit" class="demo-btn" style="width:100%;">Create SLA Ticket</button>
+        </form>
+      `;
+    } else if (activeNode === 'new_incident') {
+      formHTML = `
+        <form onsubmit="event.preventDefault(); submitDemoStep('${id}', 'new_incident');">
+          <div class="demo-form-group">
+            <label>Incident Title</label>
+            <input type="text" class="demo-input" value="${inst.variables.title || ''}" readonly>
+          </div>
+          <div class="demo-form-group">
+            <label>Assignee Name</label>
+            <input type="text" name="assignee" class="demo-input" placeholder="e.g. John Support" required>
+          </div>
+          <button type="submit" class="demo-btn" style="width:100%;">Assign SLA Incident</button>
+        </form>
+      `;
+    } else if (activeNode === 'investigating') {
+      formHTML = `
+        <form onsubmit="event.preventDefault(); submitDemoStep('${id}', 'investigating');">
+          <div class="demo-form-group">
+            <label>Incident Title</label>
+            <input type="text" class="demo-input" value="${inst.variables.title || ''}" readonly>
+          </div>
+          <div class="demo-form-group">
+            <label>Comments / Updates</label>
+            <input type="text" name="comments" class="demo-input" placeholder="e.g. Found database deadlock issue" required>
+          </div>
+          <button type="submit" class="demo-btn" style="width:100%;">Post Update</button>
+        </form>
+      `;
+    } else if (activeNode === 'resolved') {
+      formHTML = `
+        <form onsubmit="event.preventDefault(); submitDemoStep('${id}', 'resolved');">
+          <div class="demo-form-group">
+            <label>Incident Title</label>
+            <input type="text" class="demo-input" value="${inst.variables.title || ''}" readonly>
+          </div>
+          <div class="demo-form-group">
+            <label>Resolution Notes</label>
+            <input type="text" name="resolution" class="demo-input" placeholder="e.g. Database indexes updated" required>
+          </div>
+          <button type="submit" class="demo-btn" style="width:100%;">Resolve Incident</button>
+        </form>
+      `;
+    }
+  }
+
+  formBox.innerHTML = formHTML;
+}
+
+function clearDemoForm() {
+  const formBox = document.getElementById('demo-action-form');
+  if (formBox) {
+    formBox.innerHTML = '<p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; margin-top: 1rem;">Select a card to act on it.</p>';
+  }
+}
+
+// Global functions for inline DOM event bindings
+(window as any).submitDemoStep = function (id: string, activeNode: string) {
+  const inst = simInstances.find(i => i.id === id);
+  if (!inst) return;
+
+  // Authorization checks
+  if (inst.type === 'servicedesk') {
+    if (activeNode !== 'create_incident' && demoRole === 'Customer') {
+      logDemoConsole(`Wasmee: [SECURITY ERROR] Role 'Customer' is unauthorized for transition step '${activeNode}'.`, 'error');
+      alert(`Access Denied: Customer role cannot perform '${activeNode}' operations!`);
+      return;
+    }
+  }
+
+  const form = document.querySelector('#demo-action-form form') as HTMLFormElement;
+  const formData = new FormData(form);
+  const input: any = {};
+  for (let [key, val] of formData.entries()) {
+    input[key] = val;
+  }
+  // Checkbox conversion
+  form.querySelectorAll('input[type="checkbox"]').forEach((cb: any) => {
+    input[cb.name] = cb.checked;
+  });
+
+  logDemoConsole(`Host: Resuming instance ${id.substring(0, 5)} on entrypoint 'resume' with role: ${demoRole}...`);
+  logDemoConsole(`Wasmee: Restoring memory... Loading snapshot checkpoint (Version ${inst.version}).`);
+  logDemoConsole(`Wasmee: Sandbox memory state restored in 31 µs.`);
+  logDemoConsole(`Wasmee: Replaying ${inst.version - 1} oplog entries for deterministic execution.`);
+  logDemoConsole(`Wasmee: Running entrypoint 'resume' for active_node='${activeNode}'...`, 'success');
+
+  // Apply inputs to variables
+  for (let k in input) {
+    inst.variables[k] = input[k];
+  }
+
+  inst.version++;
+  
+  // Transitions
+  if (inst.type === 'workflow') {
+    if (activeNode === 'add_todo') {
+      inst.waiting_nodes = ['complete_todo'];
+      inst.history.push(`Todo item added. Base checkpoint Version ${inst.version} saved.`);
+    } else if (activeNode === 'complete_todo') {
+      inst.completed = true;
+      inst.waiting_nodes = [];
+      inst.history.push(`Todo completed. Final checkpoint saved.`);
+    }
+  } else if (inst.type === 'servicedesk') {
+    if (activeNode === 'create_incident') {
+      inst.variables.status = 'New';
+      inst.variables.sla_reaction_breached = false;
+      inst.variables.sla_resolution_breached = false;
+      inst.waiting_nodes = ['new_incident'];
+      inst.history.push(`Incident logged as New. Reaction SLA initiated.`);
+    } else if (activeNode === 'new_incident') {
+      inst.variables.status = 'Assigned';
+      inst.waiting_nodes = ['investigating'];
+      inst.history.push(`Incident assigned to ${input.assignee}.`);
+    } else if (activeNode === 'investigating') {
+      inst.variables.status = 'Investigating';
+      inst.waiting_nodes = ['resolved'];
+      inst.history.push(`Details updated: ${input.comments}`);
+    } else if (activeNode === 'resolved') {
+      inst.variables.status = 'Resolved';
+      inst.completed = true;
+      inst.waiting_nodes = [];
+      inst.history.push(`Incident resolved. Resolution notes: ${input.resolution}`);
+    }
+  }
+
+  logDemoConsole(`Wasmee: Saved snapshot checkpoint (Version ${inst.version}).`, 'success');
+  logDemoConsole(`Host: Workflow step '${activeNode}' completed successfully.`);
+
+  selectDemoInstance(id);
+};
+
+(window as any).playGameTurn = function (id: string, action: string) {
+  const inst = simInstances.find(i => i.id === id);
+  if (!inst) return;
+
+  logDemoConsole(`Host: Resuming Sven vs Lina arena session on entrypoint 'resume'...`);
+  logDemoConsole(`Wasmee: Restoring memory... Loading snapshot checkpoint (Version ${inst.version}).`);
+  logDemoConsole(`Wasmee: Replaying combat logs.`);
+  logDemoConsole(`Wasmee: Running game turn logic for action '${action}'...`, 'success');
+
+  inst.version++;
+  inst.variables.turn++;
+
+  if (action === 'StormHammer') {
+    inst.variables.lina_hp = Math.max(0, inst.variables.lina_hp - 20);
+    inst.variables.sven_stunned = false;
+    logDemoConsole('Wasm Game: Sven casts Storm Hammer! Lina takes 20 DMG and is stunned.', 'warn');
+  } else if (action === 'Warcry') {
+    inst.variables.sven_hp = Math.min(100, inst.variables.sven_hp + 15);
+    logDemoConsole('Wasm Game: Sven uses Warcry! Sven recovers 15 HP.', 'success');
+  } else if (action === 'DragonSlave') {
+    inst.variables.sven_hp = Math.max(0, inst.variables.sven_hp - 18);
+    logDemoConsole('Wasm Game: Lina casts Dragon Slave! Sven takes 18 DMG.', 'warn');
+  } else if (action === 'LagunaBlade') {
+    inst.variables.sven_hp = Math.max(0, inst.variables.sven_hp - 35);
+    logDemoConsole('Wasm Game: Lina casts Laguna Blade! Sven takes 35 Critical DMG.', 'error');
+  }
+
+  if (inst.variables.sven_hp <= 0 || inst.variables.lina_hp <= 0) {
+    inst.completed = true;
+    inst.waiting_nodes = [];
+    logDemoConsole('Wasm Game: Arena combat completed.', 'success');
+  }
+
+  logDemoConsole(`Wasmee: Checkpoint saved (Version ${inst.version}).`, 'success');
+  selectDemoInstance(id);
+};
+
+(window as any).simulateGameCrash = function (id: string) {
+  const inst = simInstances.find(i => i.id === id);
+  if (!inst) return;
+
+  logDemoConsole('Host: 💥 Simulating node host failure... Process terminated.', 'error');
+  logDemoConsole('Host: Spawning replacement container node in us-central1-b...');
+  
+  setTimeout(() => {
+    logDemoConsole('Host: Reconnecting session state...');
+    logDemoConsole(`Wasmee: Loading base Wasm module (JIT pre-warm compile)...`);
+    logDemoConsole(`Wasmee: [RESTORE] Reconstructing memory state from base snapshot (Version 1).`);
+    logDemoConsole(`Wasmee: Applying ${inst.version - 1} page memory delta checkpoints...`);
+    logDemoConsole(`Wasmee: Replaying ${inst.variables.turn} combat turns from oplog logs for alignment.`);
+    logDemoConsole(`Wasmee: [SUCCESS] Virtual machine memory authoritative state recovered in 46 µs.`, 'success');
+    logDemoConsole(`Host: Sven vs Lina combat session resumed precisely from turn ${inst.variables.turn}!`, 'success');
+  }, 1000);
+};
+
+// SLA background ticking in the browser
+setInterval(() => {
+  simInstances.forEach(inst => {
+    if (inst.type === 'servicedesk' && !inst.completed) {
+      const elapsed = Date.now() - inst.created_at;
+      const status = inst.variables.status || 'New';
+
+      // 60s reaction SLA
+      if (status === 'New' && elapsed > 60000 && !inst.variables.sla_reaction_breached) {
+        inst.variables.sla_reaction_breached = true;
+        inst.variables.priority = 'Critical';
+        inst.version++;
+        inst.history.push(`[SLA ALERT] Reaction limit breached! Priority auto-escalated to Critical.`);
+        
+        if (inst.id === activeDemoInstanceId) {
+          logDemoConsole('Wasmee: [SLA BREACH DETECTED] Incident Reaction SLA breached! Auto-escalating priority to Critical.', 'warn');
+          logDemoConsole(`Wasmee: Saved snapshot checkpoint (Version ${inst.version}).`, 'success');
+        }
+      }
+
+      // 180s resolution SLA
+      if (status !== 'Resolved' && elapsed > 180000 && !inst.variables.sla_resolution_breached) {
+        inst.variables.sla_resolution_breached = true;
+        inst.version++;
+        inst.history.push(`[SLA BREACH] Resolution limit breached! Escalated to Service Manager.`);
+        
+        if (inst.id === activeDemoInstanceId) {
+          logDemoConsole('Wasmee: [SLA BREACH DETECTED] Incident Resolution SLA breached! Escalating alert to Manager.', 'error');
+          logDemoConsole(`Wasmee: Saved snapshot checkpoint (Version ${inst.version}).`, 'success');
+        }
+      }
+    }
+  });
+
+  if (activeDemoProduct === 'servicedesk') {
+    renderDemoItems();
+    if (activeDemoInstanceId) {
+      const activeInst = simInstances.find(i => i.id === activeDemoInstanceId);
+      if (activeInst) {
+        updateDemoVarsView(activeInst.variables);
+      }
+    }
+  }
+}, 1000);
 
 // Bind navigation routes
 window.addEventListener('hashchange', router);

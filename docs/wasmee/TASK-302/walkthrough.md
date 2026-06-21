@@ -56,3 +56,13 @@ Verified that the Go backend starts up successfully and binds to port `8086`:
 go run examples/servicedesk/main.go
 # Result: Wasmee Multi-Domain ServiceDesk App is running on http://localhost:8086
 ```
+
+### 4. Homepage Compilation & Click Handler Verification
+- Resolved TypeScript compiler errors (`Cannot redeclare block-scoped variable 'productCards'` and unused `modified` variables in `site/src/main.ts`).
+- Built the frontend successfully:
+```bash
+npm run build
+# Result: Vite production build succeeded without errors.
+```
+- Verified that clicking on the product cards (Wasmee Workflow, Wasmee Game, Wasmee ServiceDesk) successfully opens the Interactive Demo Modal in the browser and displays simulated execution runs.
+
