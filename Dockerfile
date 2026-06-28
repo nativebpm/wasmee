@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y protobuf-compiler && rm -rf /var/lib/ap
 COPY Cargo.toml Cargo.lock build.rs wasmee.proto ./
 COPY src ./src
 COPY guest ./guest
+COPY examples ./examples
 
 # Build the release binary
 RUN cargo build --release --bin wasmee
