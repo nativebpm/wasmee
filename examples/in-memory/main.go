@@ -7,23 +7,22 @@ import (
 	"path/filepath"
 
 	"github.com/nativebpm/wasmee"
-	"github.com/nativebpm/wasmee/olme"
 )
 
 // memoryStore implements olme.SnapshotStore in memory.
 type memoryStore struct {
 	snapshots map[string][]byte
 	deltas    map[string]map[int][]byte
-	oplogs    map[string][]olme.OplogEntry
-	metadata  map[string]*olme.InstanceMeta
+	oplogs    map[string][]wasmee.OplogEntry
+	metadata  map[string]*wasmee.InstanceMeta
 }
 
 func newMemoryStore() *memoryStore {
 	return &memoryStore{
 		snapshots: make(map[string][]byte),
 		deltas:    make(map[string]map[int][]byte),
-		oplogs:    make(map[string][]olme.OplogEntry),
-		metadata:  make(map[string]*olme.InstanceMeta),
+		oplogs:    make(map[string][]wasmee.OplogEntry),
+		metadata:  make(map[string]*wasmee.InstanceMeta),
 	}
 }
 
@@ -64,17 +63,17 @@ func (s *memoryStore) TruncateDeltas(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *memoryStore) SaveOplog(ctx context.Context, id string, entry olme.OplogEntry) error {
+func (s *memoryStore) SaveOplog(ctx context.Context, id string, entry wasmee.OplogEntry) error {
 	s.oplogs[id] = append(s.oplogs[id], entry)
 	return nil
 }
 
-func (s *memoryStore) LoadOplog(ctx context.Context, id string) ([]olme.OplogEntry, error) {
+func (s *memoryStore) LoadOplog(ctx context.Context, id string) ([]wasmee.OplogEntry, error) {
 	return s.oplogs[id], nil
 }
 
 func (s *memoryStore) TruncateOplog(ctx context.Context, id string, beforeCallIndex int) error {
-	var filtered []olme.OplogEntry
+	var filtered []wasmee.OplogEntry
 	for _, entry := range s.oplogs[id] {
 		if entry.CallIndex < beforeCallIndex {
 			filtered = append(filtered, entry)
@@ -84,12 +83,12 @@ func (s *memoryStore) TruncateOplog(ctx context.Context, id string, beforeCallIn
 	return nil
 }
 
-func (s *memoryStore) SaveMetadata(ctx context.Context, meta *olme.InstanceMeta) (bool, error) {
+func (s *memoryStore) SaveMetadata(ctx context.Context, meta *wasmee.InstanceMeta) (bool, error) {
 	s.metadata[meta.InstanceID] = meta
 	return true, nil
 }
 
-func (s *memoryStore) LoadMetadata(ctx context.Context, id string) (*olme.InstanceMeta, error) {
+func (s *memoryStore) LoadMetadata(ctx context.Context, id string) (*wasmee.InstanceMeta, error) {
 	meta, ok := s.metadata[id]
 	if !ok {
 		return nil, fmt.Errorf("metadata not found")
@@ -99,12 +98,15 @@ func (s *memoryStore) LoadMetadata(ctx context.Context, id string) (*olme.Instan
 
 func main() {
 	// 1. Locate the precompiled guest WASM file
-	wasmPath := filepath.Join("..", "..", "..", "wasmee", "target", "wasm32-wasip1", "release", "wasmee_guest.wasm")
+	wasmPath := filepath.Join("..", "..", "..", "..", "wasmee", "target", "wasm32-wasip1", "release", "wasmee_guest.wasm")
 	if _, err := os.Stat(wasmPath); os.IsNotExist(err) {
-		wasmPath = filepath.Join("wasmee", "target", "wasm32-wasip1", "release", "wasmee_guest.wasm")
+		wasmPath = filepath.Join("..", "..", "wasmee", "target", "wasm32-wasip1", "release", "wasmee_guest.wasm")
 		if _, err := os.Stat(wasmPath); os.IsNotExist(err) {
-			fmt.Println("Error: wasmee_guest.wasm not found. Please compile the Rust guest first.")
-			os.Exit(1)
+			wasmPath = filepath.Join("wasmee", "target", "wasm32-wasip1", "release", "wasmee_guest.wasm")
+			if _, err := os.Stat(wasmPath); os.IsNotExist(err) {
+				fmt.Println("Error: wasmee_guest.wasm not found. Please compile the Rust guest first.")
+				os.Exit(1)
+			}
 		}
 	}
 
@@ -119,30 +121,28 @@ func main() {
 	instanceID := "in-memory-session-demo"
 	store := newMemoryStore()
 
-	meta := &olme.InstanceMeta{
+	meta := &wasmee.InstanceMeta{
 		InstanceID: instanceID,
 		WasmHash:   "demo_hash",
 		Version:    0,
 	}
 	_, _ = store.SaveMetadata(ctx, meta)
 
-	state := olme.NewSessionState(instanceID, store)
-	if err := state.Load(ctx); err != nil {
-		fmt.Printf("Failed to load session state: %v\n", err)
-		os.Exit(1)
-	}
+	// Set local test authorization token
+	os.Setenv("API_TOKEN", "test-bearer-token")
 
-	// 3. Create wasmee HTTP runner (expects the Rust runner server to be running on :8081)
-	runner, err := wasmee.NewRunner(ctx, wasmBytes, "http://localhost:8081")
-	if err != nil {
-		fmt.Printf("Failed to initialize runner: %v\n", err)
-		os.Exit(1)
-	}
+	fmt.Printf("[HOST] Triggering execution of guest function \"run_test\" using Fluent API...\n")
+	
+	// 3. Execute using the FluentRunner
+	crashed, err := wasmee.NewFluentRunner().
+		WithContext(ctx).
+		WithServerAddress("http://localhost:8081").
+		WithWasmBytes(wasmBytes).
+		WithStore(store).
+		WithSessionID(instanceID).
+		WithEntrypoint("run_test").
+		Run()
 
-	session := wasmee.NewSession(instanceID, state)
-
-	fmt.Printf("[HOST] Triggering execution of guest function \"run_test\"...\n")
-	crashed, _, err := runner.Execute(ctx, session, "run_test", nil)
 	if err != nil {
 		fmt.Printf("Execution failed: %v (crashed: %v)\n", err, crashed)
 		os.Exit(1)
