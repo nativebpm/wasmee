@@ -1,82 +1,46 @@
-# WASMEE Guest & Host Examples
+# Wasmee Go Client Examples
 
-This directory demonstrates how to write and execute domain-agnostic, durable guest WebAssembly workflows on the WASMEE runner.
+This directory contains examples demonstrating how to use the `wasmee` client runner to execute guest WebAssembly modules on the standalone Rust execution server.
 
-## 1. Custom Guest Example (`guest_custom`)
+## Prerequisites
 
-The `guest_custom` directory contains a minimal guest module written in Rust. It illustrates:
-- How to receive arbitrary inputs through the shared memory **Exchange Buffer**.
-- How to invoke host-side APIs via **`host_call_api`**.
-- How to mark execution milestones via **`checkpoint`**.
+1. **Rust Server Running**:
+   Build and start the Rust `wasmee` HTTP execution engine:
+   ```bash
+   # From workspace root
+   cd wasmee
+   cargo build --package wasmee --release
+   ./target/release/wasmee
+   ```
 
-### Compiling the Guest
+2. **Guest WASM Compiled**:
+   Compile the guest WebAssembly module to WASI target:
+   ```bash
+   # From workspace root
+   cd wasmee
+   cargo build --package wasmee-guest --target wasm32-wasip1 --release
+   ```
 
-To compile the custom guest Wasm module into a WebAssembly WASI binary:
+## Running Examples
 
+### 1. In-Memory Run
+Runs a simple successful guest function execution showing oplog captures:
 ```bash
-# From the wasmee repository root:
-cargo build --target wasm32-wasip1 --release --package guest-custom
+# From workspace root
+go run connectors/wasmee/examples/in-memory/main.go
 ```
 
-This generates the compiled Wasm file at:
-`target/wasm32-wasip1/release/guest_custom.wasm`
-
----
-
-## 2. Running the WASMEE Server
-
-To start the WASMEE HTTP server daemon locally (by default on port `8081`):
-
+### 2. Crash Recovery Run
+Simulates a host crash during checkpointing, reload session state from the SnapshotStore, and resumes execution to completion:
 ```bash
-# Start the host server daemon with a secure API token
-API_TOKEN="my-secret-key" cargo run --release
+# From workspace root
+go run connectors/wasmee/examples/crash-recovery/main.go
 ```
 
----
-
-## 3. Client Execution Example
-
-You can write clients in Go (using the [wasmee Go client](file:///Users/user/github.com/nativebpm/connectors/wasmee)) to upload the compiled guest Wasm bytes and trigger execution.
-
-### Go Client Snippet
-
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-	"os"
-
-	"github.com/nativebpm/connectors/wasmee"
-	"github.com/nativebpm/connectors/wasmee/olme"
-)
-
-func main() {
-	// Read custom guest Wasm bytes
-	wasmBytes, _ := os.ReadFile("target/wasm32-wasip1/release/guest_custom.wasm")
-
-	ctx := context.Background()
-	os.Setenv("API_TOKEN", "my-secret-key")
-
-	// Create wasmee HTTP runner targeting the localhost daemon
-	runner, _ := wasmee.NewRunner(ctx, wasmBytes, "http://localhost:8081")
-	
-	// Create OLME session state store
-	store := newMemoryStore() // implementing olme.SnapshotStore
-	state := olme.NewSessionState("session-1", store)
-	_ = state.Load(ctx)
-	session := wasmee.NewSession("session-1", state)
-
-	// Call the "run_durable_workflow" entrypoint in guest-custom Wasm
-	input := []byte("Alice")
-	crashed, result, err := runner.Execute(ctx, session, "run_durable_workflow", input)
-	
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return
-	}
-	
-	fmt.Printf("Result: %s\n", string(result))
-}
+### 3. Todo List Durable Web App
+A full-featured web server demonstrating a durable multi-step user task (TODO list) workflow using Wasmee:
+```bash
+# From workspace root
+go run connectors/wasmee/examples/todo-list/main.go
 ```
+The web server will start on port `8080` (or `PORT` env var). You can interact with it via its HTTP endpoints.

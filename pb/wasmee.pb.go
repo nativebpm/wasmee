@@ -89,126 +89,6 @@ func (x *OplogEntry) GetResponsePayload() []byte {
 	return nil
 }
 
-type GitSource struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Repository    string                 `protobuf:"bytes,1,opt,name=repository,proto3" json:"repository,omitempty"`
-	GitRef        string                 `protobuf:"bytes,2,opt,name=git_ref,json=gitRef,proto3" json:"git_ref,omitempty"` // Can be a branch, tag (e.g. v1.0.0), or commit hash
-	FilePath      string                 `protobuf:"bytes,3,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
-	GitToken      string                 `protobuf:"bytes,4,opt,name=git_token,json=gitToken,proto3" json:"git_token,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GitSource) Reset() {
-	*x = GitSource{}
-	mi := &file_wasmee_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GitSource) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GitSource) ProtoMessage() {}
-
-func (x *GitSource) ProtoReflect() protoreflect.Message {
-	mi := &file_wasmee_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GitSource.ProtoReflect.Descriptor instead.
-func (*GitSource) Descriptor() ([]byte, []int) {
-	return file_wasmee_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *GitSource) GetRepository() string {
-	if x != nil {
-		return x.Repository
-	}
-	return ""
-}
-
-func (x *GitSource) GetGitRef() string {
-	if x != nil {
-		return x.GitRef
-	}
-	return ""
-}
-
-func (x *GitSource) GetFilePath() string {
-	if x != nil {
-		return x.FilePath
-	}
-	return ""
-}
-
-func (x *GitSource) GetGitToken() string {
-	if x != nil {
-		return x.GitToken
-	}
-	return ""
-}
-
-type SandboxConfig struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	MaxFuel       uint64                 `protobuf:"varint,1,opt,name=max_fuel,json=maxFuel,proto3" json:"max_fuel,omitempty"`
-	MaxMemoryMb   uint32                 `protobuf:"varint,2,opt,name=max_memory_mb,json=maxMemoryMb,proto3" json:"max_memory_mb,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SandboxConfig) Reset() {
-	*x = SandboxConfig{}
-	mi := &file_wasmee_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SandboxConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SandboxConfig) ProtoMessage() {}
-
-func (x *SandboxConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_wasmee_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SandboxConfig.ProtoReflect.Descriptor instead.
-func (*SandboxConfig) Descriptor() ([]byte, []int) {
-	return file_wasmee_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *SandboxConfig) GetMaxFuel() uint64 {
-	if x != nil {
-		return x.MaxFuel
-	}
-	return 0
-}
-
-func (x *SandboxConfig) GetMaxMemoryMb() uint32 {
-	if x != nil {
-		return x.MaxMemoryMb
-	}
-	return 0
-}
-
 type ExecuteRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	InstanceId     string                 `protobuf:"bytes,1,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"`
@@ -220,15 +100,13 @@ type ExecuteRequest struct {
 	ExchangeBuffer []byte                 `protobuf:"bytes,7,opt,name=exchange_buffer,json=exchangeBuffer,proto3" json:"exchange_buffer,omitempty"`
 	WasmBytes      []byte                 `protobuf:"bytes,8,opt,name=wasm_bytes,json=wasmBytes,proto3" json:"wasm_bytes,omitempty"`
 	WasmHash       string                 `protobuf:"bytes,9,opt,name=wasm_hash,json=wasmHash,proto3" json:"wasm_hash,omitempty"`
-	GitSource      *GitSource             `protobuf:"bytes,10,opt,name=git_source,json=gitSource,proto3" json:"git_source,omitempty"`
-	SandboxConfig  *SandboxConfig         `protobuf:"bytes,11,opt,name=sandbox_config,json=sandboxConfig,proto3" json:"sandbox_config,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ExecuteRequest) Reset() {
 	*x = ExecuteRequest{}
-	mi := &file_wasmee_proto_msgTypes[3]
+	mi := &file_wasmee_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -240,7 +118,7 @@ func (x *ExecuteRequest) String() string {
 func (*ExecuteRequest) ProtoMessage() {}
 
 func (x *ExecuteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wasmee_proto_msgTypes[3]
+	mi := &file_wasmee_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -253,7 +131,7 @@ func (x *ExecuteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecuteRequest.ProtoReflect.Descriptor instead.
 func (*ExecuteRequest) Descriptor() ([]byte, []int) {
-	return file_wasmee_proto_rawDescGZIP(), []int{3}
+	return file_wasmee_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ExecuteRequest) GetInstanceId() string {
@@ -319,124 +197,6 @@ func (x *ExecuteRequest) GetWasmHash() string {
 	return ""
 }
 
-func (x *ExecuteRequest) GetGitSource() *GitSource {
-	if x != nil {
-		return x.GitSource
-	}
-	return nil
-}
-
-func (x *ExecuteRequest) GetSandboxConfig() *SandboxConfig {
-	if x != nil {
-		return x.SandboxConfig
-	}
-	return nil
-}
-
-type WarmupRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	GitSource     *GitSource             `protobuf:"bytes,1,opt,name=git_source,json=gitSource,proto3" json:"git_source,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *WarmupRequest) Reset() {
-	*x = WarmupRequest{}
-	mi := &file_wasmee_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *WarmupRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*WarmupRequest) ProtoMessage() {}
-
-func (x *WarmupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wasmee_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use WarmupRequest.ProtoReflect.Descriptor instead.
-func (*WarmupRequest) Descriptor() ([]byte, []int) {
-	return file_wasmee_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *WarmupRequest) GetGitSource() *GitSource {
-	if x != nil {
-		return x.GitSource
-	}
-	return nil
-}
-
-type WarmupResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	WasmHash      string                 `protobuf:"bytes,2,opt,name=wasm_hash,json=wasmHash,proto3" json:"wasm_hash,omitempty"`
-	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *WarmupResponse) Reset() {
-	*x = WarmupResponse{}
-	mi := &file_wasmee_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *WarmupResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*WarmupResponse) ProtoMessage() {}
-
-func (x *WarmupResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wasmee_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use WarmupResponse.ProtoReflect.Descriptor instead.
-func (*WarmupResponse) Descriptor() ([]byte, []int) {
-	return file_wasmee_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *WarmupResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *WarmupResponse) GetWasmHash() string {
-	if x != nil {
-		return x.WasmHash
-	}
-	return ""
-}
-
-func (x *WarmupResponse) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
-}
-
 type CheckpointData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Memory        []byte                 `protobuf:"bytes,1,opt,name=memory,proto3" json:"memory,omitempty"`
@@ -447,7 +207,7 @@ type CheckpointData struct {
 
 func (x *CheckpointData) Reset() {
 	*x = CheckpointData{}
-	mi := &file_wasmee_proto_msgTypes[6]
+	mi := &file_wasmee_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -459,7 +219,7 @@ func (x *CheckpointData) String() string {
 func (*CheckpointData) ProtoMessage() {}
 
 func (x *CheckpointData) ProtoReflect() protoreflect.Message {
-	mi := &file_wasmee_proto_msgTypes[6]
+	mi := &file_wasmee_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -472,7 +232,7 @@ func (x *CheckpointData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckpointData.ProtoReflect.Descriptor instead.
 func (*CheckpointData) Descriptor() ([]byte, []int) {
-	return file_wasmee_proto_rawDescGZIP(), []int{6}
+	return file_wasmee_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CheckpointData) GetMemory() []byte {
@@ -504,7 +264,7 @@ type ExecuteResponse struct {
 
 func (x *ExecuteResponse) Reset() {
 	*x = ExecuteResponse{}
-	mi := &file_wasmee_proto_msgTypes[7]
+	mi := &file_wasmee_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -516,7 +276,7 @@ func (x *ExecuteResponse) String() string {
 func (*ExecuteResponse) ProtoMessage() {}
 
 func (x *ExecuteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wasmee_proto_msgTypes[7]
+	mi := &file_wasmee_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -529,7 +289,7 @@ func (x *ExecuteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecuteResponse.ProtoReflect.Descriptor instead.
 func (*ExecuteResponse) Descriptor() ([]byte, []int) {
-	return file_wasmee_proto_rawDescGZIP(), []int{7}
+	return file_wasmee_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ExecuteResponse) GetCrashed() bool {
@@ -592,17 +352,7 @@ const file_wasmee_proto_rawDesc = "" +
 	"call_index\x18\x01 \x01(\x05R\tcallIndex\x12\x19\n" +
 	"\bapi_name\x18\x02 \x01(\tR\aapiName\x12'\n" +
 	"\x0frequest_payload\x18\x03 \x01(\fR\x0erequestPayload\x12)\n" +
-	"\x10response_payload\x18\x04 \x01(\fR\x0fresponsePayload\"~\n" +
-	"\tGitSource\x12\x1e\n" +
-	"\n" +
-	"repository\x18\x01 \x01(\tR\n" +
-	"repository\x12\x17\n" +
-	"\agit_ref\x18\x02 \x01(\tR\x06gitRef\x12\x1b\n" +
-	"\tfile_path\x18\x03 \x01(\tR\bfilePath\x12\x1b\n" +
-	"\tgit_token\x18\x04 \x01(\tR\bgitToken\"N\n" +
-	"\rSandboxConfig\x12\x19\n" +
-	"\bmax_fuel\x18\x01 \x01(\x04R\amaxFuel\x12\"\n" +
-	"\rmax_memory_mb\x18\x02 \x01(\rR\vmaxMemoryMb\"\x9d\x04\n" +
+	"\x10response_payload\x18\x04 \x01(\fR\x0fresponsePayload\"\xad\x03\n" +
 	"\x0eExecuteRequest\x12\x1f\n" +
 	"\vinstance_id\x18\x01 \x01(\tR\n" +
 	"instanceId\x12\x1e\n" +
@@ -616,21 +366,10 @@ const file_wasmee_proto_rawDesc = "" +
 	"\x0fexchange_buffer\x18\a \x01(\fR\x0eexchangeBuffer\x12\x1d\n" +
 	"\n" +
 	"wasm_bytes\x18\b \x01(\fR\twasmBytes\x12\x1b\n" +
-	"\twasm_hash\x18\t \x01(\tR\bwasmHash\x120\n" +
-	"\n" +
-	"git_source\x18\n" +
-	" \x01(\v2\x11.wasmee.GitSourceR\tgitSource\x12<\n" +
-	"\x0esandbox_config\x18\v \x01(\v2\x15.wasmee.SandboxConfigR\rsandboxConfig\x1a?\n" +
+	"\twasm_hash\x18\t \x01(\tR\bwasmHash\x1a?\n" +
 	"\x11MemoryDeltasEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"A\n" +
-	"\rWarmupRequest\x120\n" +
-	"\n" +
-	"git_source\x18\x01 \x01(\v2\x11.wasmee.GitSourceR\tgitSource\"]\n" +
-	"\x0eWarmupResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x1b\n" +
-	"\twasm_hash\x18\x02 \x01(\tR\bwasmHash\x12\x14\n" +
-	"\x05error\x18\x03 \x01(\tR\x05error\"E\n" +
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"E\n" +
 	"\x0eCheckpointData\x12\x16\n" +
 	"\x06memory\x18\x01 \x01(\fR\x06memory\x12\x1b\n" +
 	"\toplog_len\x18\x02 \x01(\x05R\boplogLen\"\x8e\x03\n" +
@@ -645,7 +384,7 @@ const file_wasmee_proto_rawDesc = "" +
 	"\x10module_not_found\x18\a \x01(\bR\x0emoduleNotFound\x1a>\n" +
 	"\x10FinalDeltasEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01B Z\x1egithub.com/nativebpm/wasmee/pbb\x06proto3"
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01B+Z)github.com/nativebpm/wasmee/pbb\x06proto3"
 
 var (
 	file_wasmee_proto_rawDescOnce sync.Once
@@ -659,33 +398,26 @@ func file_wasmee_proto_rawDescGZIP() []byte {
 	return file_wasmee_proto_rawDescData
 }
 
-var file_wasmee_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_wasmee_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_wasmee_proto_goTypes = []any{
 	(*OplogEntry)(nil),      // 0: wasmee.OplogEntry
-	(*GitSource)(nil),       // 1: wasmee.GitSource
-	(*SandboxConfig)(nil),   // 2: wasmee.SandboxConfig
-	(*ExecuteRequest)(nil),  // 3: wasmee.ExecuteRequest
-	(*WarmupRequest)(nil),   // 4: wasmee.WarmupRequest
-	(*WarmupResponse)(nil),  // 5: wasmee.WarmupResponse
-	(*CheckpointData)(nil),  // 6: wasmee.CheckpointData
-	(*ExecuteResponse)(nil), // 7: wasmee.ExecuteResponse
-	nil,                     // 8: wasmee.ExecuteRequest.MemoryDeltasEntry
-	nil,                     // 9: wasmee.ExecuteResponse.FinalDeltasEntry
+	(*ExecuteRequest)(nil),  // 1: wasmee.ExecuteRequest
+	(*CheckpointData)(nil),  // 2: wasmee.CheckpointData
+	(*ExecuteResponse)(nil), // 3: wasmee.ExecuteResponse
+	nil,                     // 4: wasmee.ExecuteRequest.MemoryDeltasEntry
+	nil,                     // 5: wasmee.ExecuteResponse.FinalDeltasEntry
 }
 var file_wasmee_proto_depIdxs = []int32{
-	8, // 0: wasmee.ExecuteRequest.memory_deltas:type_name -> wasmee.ExecuteRequest.MemoryDeltasEntry
+	4, // 0: wasmee.ExecuteRequest.memory_deltas:type_name -> wasmee.ExecuteRequest.MemoryDeltasEntry
 	0, // 1: wasmee.ExecuteRequest.oplog:type_name -> wasmee.OplogEntry
-	1, // 2: wasmee.ExecuteRequest.git_source:type_name -> wasmee.GitSource
-	2, // 3: wasmee.ExecuteRequest.sandbox_config:type_name -> wasmee.SandboxConfig
-	1, // 4: wasmee.WarmupRequest.git_source:type_name -> wasmee.GitSource
-	9, // 5: wasmee.ExecuteResponse.final_deltas:type_name -> wasmee.ExecuteResponse.FinalDeltasEntry
-	0, // 6: wasmee.ExecuteResponse.final_oplog:type_name -> wasmee.OplogEntry
-	6, // 7: wasmee.ExecuteResponse.checkpoints:type_name -> wasmee.CheckpointData
-	8, // [8:8] is the sub-list for method output_type
-	8, // [8:8] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	5, // 2: wasmee.ExecuteResponse.final_deltas:type_name -> wasmee.ExecuteResponse.FinalDeltasEntry
+	0, // 3: wasmee.ExecuteResponse.final_oplog:type_name -> wasmee.OplogEntry
+	2, // 4: wasmee.ExecuteResponse.checkpoints:type_name -> wasmee.CheckpointData
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_wasmee_proto_init() }
@@ -699,7 +431,7 @@ func file_wasmee_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wasmee_proto_rawDesc), len(file_wasmee_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

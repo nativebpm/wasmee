@@ -9,46 +9,60 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/nativebpm/wasmee/olme"
 )
 
 func startRustServer(t *testing.T) func() {
-	cmd := exec.Command("./target/debug/wasmee")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("failed to start rust server: %v", err)
+	// First check if a server is already listening on 8081 (e.g. running via docker or manually)
+	conn, err := net.DialTimeout("tcp", "localhost:8081", 100*time.Millisecond)
+	if err == nil {
+		conn.Close()
+		return func() {} // Already running, no-op cleanup
 	}
 
-	for i := 0; i < 50; i++ {
-		conn, err := net.DialTimeout("tcp", "localhost:8081", 50*time.Millisecond)
-		if err == nil {
-			conn.Close()
-			break
+	// Try to launch the sibling debug binary if it exists
+	_, statErr := os.Stat("../../wasmee/target/debug/wasmee")
+	if statErr == nil {
+		cmd := exec.Command("../../wasmee/target/debug/wasmee")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Start(); err != nil {
+			t.Fatalf("failed to start rust server: %v", err)
 		}
-		time.Sleep(50 * time.Millisecond)
+
+		for i := 0; i < 50; i++ {
+			conn, err := net.DialTimeout("tcp", "localhost:8081", 50*time.Millisecond)
+			if err == nil {
+				conn.Close()
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+
+		return func() {
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+		}
 	}
 
-	return func() {
-		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
-	}
+	// Otherwise, skip the test
+	t.Skip("wasmee server is not running on localhost:8081 and sibling wasmee binary is not found; skipping integration test")
+	return func() {}
 }
+
 
 type testInMemoryStore struct {
 	snapshots map[string][]byte
 	deltas    map[string]map[int][]byte
-	oplogs    map[string][]olme.OplogEntry
-	metadata  map[string]*olme.InstanceMeta
+	oplogs    map[string][]OplogEntry
+	metadata  map[string]*InstanceMeta
 }
 
 func newTestStore() *testInMemoryStore {
 	return &testInMemoryStore{
 		snapshots: make(map[string][]byte),
 		deltas:    make(map[string]map[int][]byte),
-		oplogs:    make(map[string][]olme.OplogEntry),
-		metadata:  make(map[string]*olme.InstanceMeta),
+		oplogs:    make(map[string][]OplogEntry),
+		metadata:  make(map[string]*InstanceMeta),
 	}
 }
 
@@ -89,17 +103,17 @@ func (s *testInMemoryStore) TruncateDeltas(ctx context.Context, id string) error
 	return nil
 }
 
-func (s *testInMemoryStore) SaveOplog(ctx context.Context, id string, entry olme.OplogEntry) error {
+func (s *testInMemoryStore) SaveOplog(ctx context.Context, id string, entry OplogEntry) error {
 	s.oplogs[id] = append(s.oplogs[id], entry)
 	return nil
 }
 
-func (s *testInMemoryStore) LoadOplog(ctx context.Context, id string) ([]olme.OplogEntry, error) {
+func (s *testInMemoryStore) LoadOplog(ctx context.Context, id string) ([]OplogEntry, error) {
 	return s.oplogs[id], nil
 }
 
 func (s *testInMemoryStore) TruncateOplog(ctx context.Context, id string, beforeCallIndex int) error {
-	var filtered []olme.OplogEntry
+	var filtered []OplogEntry
 	for _, entry := range s.oplogs[id] {
 		if entry.CallIndex < beforeCallIndex {
 			filtered = append(filtered, entry)
@@ -109,7 +123,7 @@ func (s *testInMemoryStore) TruncateOplog(ctx context.Context, id string, before
 	return nil
 }
 
-func (s *testInMemoryStore) SaveMetadata(ctx context.Context, meta *olme.InstanceMeta) (bool, error) {
+func (s *testInMemoryStore) SaveMetadata(ctx context.Context, meta *InstanceMeta) (bool, error) {
 	prev, exists := s.metadata[meta.InstanceID]
 	if exists && prev.Version != meta.Version-1 {
 		return false, nil
@@ -119,7 +133,7 @@ func (s *testInMemoryStore) SaveMetadata(ctx context.Context, meta *olme.Instanc
 	return true, nil
 }
 
-func (s *testInMemoryStore) LoadMetadata(ctx context.Context, id string) (*olme.InstanceMeta, error) {
+func (s *testInMemoryStore) LoadMetadata(ctx context.Context, id string) (*InstanceMeta, error) {
 	meta, ok := s.metadata[id]
 	if !ok {
 		return nil, errors.New("not found")
@@ -132,38 +146,32 @@ func TestWasmRunnerExecution(t *testing.T) {
 	ctx := context.Background()
 	instanceID := "test-wasm-execution-instance"
 
-	// 1. Read compiled test WASM file from wasmee workspace
-	wasmBytes, err := os.ReadFile("./guest/target/wasm32-wasip1/release/wasmee_guest.wasm")
+	// 1. Read compiled test WASM file from local testdata
+	wasmBytes, err := os.ReadFile("testdata/wasmee_guest.wasm")
 	if err != nil {
 		t.Fatalf("failed to read test WASM binary: %v", err)
 	}
 
 	store := newTestStore()
-	meta := &olme.InstanceMeta{
+	meta := &InstanceMeta{
 		InstanceID: instanceID,
 		WasmHash:   "test_hash",
 		Version:    0,
 	}
 	store.SaveMetadata(ctx, meta)
 
-	state := olme.NewSessionState(instanceID, store)
-	if err := state.Load(ctx); err != nil {
-		t.Fatalf("failed to load state: %v", err)
-	}
-
 	cleanup := startRustServer(t)
 	defer cleanup()
 
-	runner, err := NewRunner(ctx, wasmBytes, "localhost:8081")
-	if err != nil {
-		t.Fatalf("failed to create runner: %v", err)
-	}
-	defer runner.Close(ctx)
-
-	session := NewSession(instanceID, state)
-
 	// RUN 1: Starts fresh, executes up to checkpoint 1, and finishes successfully.
-	crashed, _, err := runner.Execute(ctx, session, "run_test", nil)
+	crashed, err := NewFluentRunner().
+		WithContext(ctx).
+		WithServerAddress("http://localhost:8081").
+		WithWasmBytes(wasmBytes).
+		WithStore(store).
+		WithSessionID(instanceID).
+		WithEntrypoint("run_test").
+		Run()
 	if err != nil {
 		t.Fatalf("execution failed: %v", err)
 	}
@@ -212,38 +220,32 @@ func TestWasmRunnerSimulatedCrashRecovery(t *testing.T) {
 	ctx := context.Background()
 	instanceID := "test-crash-recovery-instance"
 
-	wasmBytes, err := os.ReadFile("./guest/target/wasm32-wasip1/release/wasmee_guest.wasm")
+	wasmBytes, err := os.ReadFile("testdata/wasmee_guest.wasm")
 	if err != nil {
 		t.Fatalf("failed to read test WASM binary: %v", err)
 	}
 
 	store := newTestStore()
-	meta := &olme.InstanceMeta{
+	meta := &InstanceMeta{
 		InstanceID: instanceID,
 		WasmHash:   "test_hash",
 		Version:    0,
 	}
 	store.SaveMetadata(ctx, meta)
 
-	state := olme.NewSessionState(instanceID, store)
-	if err := state.Load(ctx); err != nil {
-		t.Fatalf("failed to load state: %v", err)
-	}
-
 	cleanup := startRustServer(t)
 	defer cleanup()
 
-	runner, err := NewRunner(ctx, wasmBytes, "localhost:8081")
-	if err != nil {
-		t.Fatalf("failed to create runner: %v", err)
-	}
-	defer runner.Close(ctx)
-
-	session := NewSession(instanceID, state)
-	session.EnableCrashSimulation(true)
-
 	// RUN 1: Starts fresh, hits checkpoint 1, saves state, and crashes.
-	crashed, _, err := runner.Execute(ctx, session, "run_test", nil)
+	crashed, err := NewFluentRunner().
+		WithContext(ctx).
+		WithServerAddress("http://localhost:8081").
+		WithWasmBytes(wasmBytes).
+		WithStore(store).
+		WithSessionID(instanceID).
+		WithEntrypoint("run_test").
+		WithCrashSimulation(true).
+		Run()
 	if err == nil || !crashed {
 		t.Fatalf("expected simulated host crash, got nil or no crash")
 	}
@@ -267,22 +269,15 @@ func TestWasmRunnerSimulatedCrashRecovery(t *testing.T) {
 	}
 
 	// RUN 2: Reload state and resume from crash point (disabling crash simulation)
-	state2 := olme.NewSessionState(instanceID, store)
-	if err := state2.Load(ctx); err != nil {
-		t.Fatalf("failed to load state for resume: %v", err)
-	}
-
-	session2 := NewSession(instanceID, state2)
-	session2.EnableCrashSimulation(false)
-
-	// Keep track of handler execution (should replay "hello" from oplog, and run "world" fresh)
-	execCount := 0
-	session2.ApiHandler = func(apiName string, request []byte) ([]byte, error) {
-		execCount++
-		return []byte("resp_for_api"), nil
-	}
-
-	crashed2, _, err := runner.Execute(ctx, session2, "run_test", nil)
+	crashed2, err := NewFluentRunner().
+		WithContext(ctx).
+		WithServerAddress("http://localhost:8081").
+		WithWasmBytes(wasmBytes).
+		WithStore(store).
+		WithSessionID(instanceID).
+		WithEntrypoint("run_test").
+		WithCrashSimulation(false).
+		Run()
 	if err != nil {
 		t.Fatalf("resume execution failed: %v", err)
 	}
@@ -321,7 +316,7 @@ func TestDynamicWasmModuleExecution(t *testing.T) {
 	instanceID := "test-dynamic-wasm-instance"
 
 	// 1. Read valid guest WASM file
-	wasmBytes, err := os.ReadFile("./guest/target/wasm32-wasip1/release/wasmee_guest.wasm")
+	wasmBytes, err := os.ReadFile("testdata/wasmee_guest.wasm")
 	if err != nil {
 		t.Fatalf("failed to read test WASM binary: %v", err)
 	}
@@ -330,29 +325,22 @@ func TestDynamicWasmModuleExecution(t *testing.T) {
 	defer cleanup()
 
 	store := newTestStore()
-	meta := &olme.InstanceMeta{
+	meta := &InstanceMeta{
 		InstanceID: instanceID,
 		WasmHash:   "test_hash",
 		Version:    0,
 	}
 	store.SaveMetadata(ctx, meta)
 
-	state := olme.NewSessionState(instanceID, store)
-	if err := state.Load(ctx); err != nil {
-		t.Fatalf("failed to load state: %v", err)
-	}
-
-	// Initialize runner with valid WASM bytes
-	runner, err := NewRunner(ctx, wasmBytes, "localhost:8081")
-	if err != nil {
-		t.Fatalf("failed to create runner: %v", err)
-	}
-	defer runner.Close(ctx)
-
-	session := NewSession(instanceID, state)
-
 	// Case A: Verify successful execution with dynamic WASM bytes (first compile)
-	crashed, _, err := runner.Execute(ctx, session, "run_test", nil)
+	crashed, err := NewFluentRunner().
+		WithContext(ctx).
+		WithServerAddress("http://localhost:8081").
+		WithWasmBytes(wasmBytes).
+		WithStore(store).
+		WithSessionID(instanceID).
+		WithEntrypoint("run_test").
+		Run()
 	if err != nil {
 		t.Fatalf("dynamic execution failed: %v", err)
 	}
@@ -361,12 +349,14 @@ func TestDynamicWasmModuleExecution(t *testing.T) {
 	}
 
 	// Case B: Verify successful execution with cache hit (second run)
-	state2 := olme.NewSessionState(instanceID, store)
-	if err := state2.Load(ctx); err != nil {
-		t.Fatalf("failed to reload state: %v", err)
-	}
-	session2 := NewSession(instanceID, state2)
-	crashed2, _, err := runner.Execute(ctx, session2, "run_test", nil)
+	crashed2, err := NewFluentRunner().
+		WithContext(ctx).
+		WithServerAddress("http://localhost:8081").
+		WithWasmBytes(wasmBytes).
+		WithStore(store).
+		WithSessionID(instanceID).
+		WithEntrypoint("run_test").
+		Run()
 	if err != nil {
 		t.Fatalf("cached execution failed: %v", err)
 	}
@@ -376,17 +366,14 @@ func TestDynamicWasmModuleExecution(t *testing.T) {
 
 	// Case C: Verify compile failure with corrupt/invalid WASM bytes
 	corruptBytes := []byte("this is not a valid wasm file header")
-	corruptRunner, err := NewRunner(ctx, corruptBytes, "localhost:8081")
-	if err != nil {
-		t.Fatalf("failed to create corrupt runner: %v", err)
-	}
-	defer corruptRunner.Close(ctx)
-
-	state3 := olme.NewSessionState(instanceID, store)
-	_ = state3.Load(ctx)
-	session3 := NewSession(instanceID, state3)
-
-	crashed3, _, err := corruptRunner.Execute(ctx, session3, "run_test", nil)
+	crashed3, err := NewFluentRunner().
+		WithContext(ctx).
+		WithServerAddress("http://localhost:8081").
+		WithWasmBytes(corruptBytes).
+		WithStore(store).
+		WithSessionID(instanceID).
+		WithEntrypoint("run_test").
+		Run()
 	if err == nil {
 		t.Fatalf("expected error executing corrupt WASM, got nil")
 	}
@@ -402,7 +389,7 @@ func TestFluentRunnerExecution(t *testing.T) {
 	stop := startRustServer(t)
 	defer stop()
 
-	wasmPath := "./guest/target/wasm32-wasip1/release/wasmee_guest.wasm"
+	wasmPath := "testdata/wasmee_guest.wasm"
 	wasmBytes, err := os.ReadFile(wasmPath)
 	if err != nil {
 		t.Fatalf("failed to read guest WASM: %v", err)
@@ -412,7 +399,7 @@ func TestFluentRunnerExecution(t *testing.T) {
 	instanceID := "fluent-session-1"
 	store := newTestStore()
 
-	meta := &olme.InstanceMeta{
+	meta := &InstanceMeta{
 		InstanceID: instanceID,
 		WasmHash:   "test_hash",
 		Version:    0,
