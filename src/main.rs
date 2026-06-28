@@ -171,8 +171,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(axum::extract::DefaultBodyLimit::max(20 * 1024 * 1024))
         .with_state(state);
 
-    let http_addr = "0.0.0.0:8081";
-    let http_listener = tokio::net::TcpListener::bind(http_addr).await?;
+    let port = std::env::var("PORT").unwrap_or_else(|_| "8081".to_string());
+    let http_addr = format!("0.0.0.0:{}", port);
+    let http_listener = tokio::net::TcpListener::bind(&http_addr).await?;
     println!("Wasmee Rust HTTP execution engine listening on http://{}", http_addr);
 
     axum::serve(http_listener, app).await?;

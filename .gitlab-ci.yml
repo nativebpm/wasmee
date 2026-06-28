@@ -24,6 +24,17 @@ deploy-site-test:
     - chmod +x deploy_wasmee_site.sh
     - ./deploy_wasmee_site.sh test
 
+deploy-engine-test:
+  stage: deploy
+  tags:
+    - m5
+  image: google/cloud-sdk:alpine
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "test"'
+  script:
+    - chmod +x deploy_wasmee_engine.sh
+    - ./deploy_wasmee_engine.sh test
+
 deploy-site-main:
   stage: deploy
   tags:
@@ -34,3 +45,14 @@ deploy-site-main:
   script:
     - chmod +x deploy_wasmee_site.sh
     - ./deploy_wasmee_site.sh prod
+
+deploy-engine-main:
+  stage: deploy
+  tags:
+    - m5
+  image: google/cloud-sdk:alpine
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  script:
+    - chmod +x deploy_wasmee_engine.sh
+    - ./deploy_wasmee_engine.sh prod

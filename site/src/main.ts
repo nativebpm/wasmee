@@ -156,7 +156,11 @@ const btnWarmup = document.getElementById('btn-warmup');
 const btnExecute = document.getElementById('btn-execute');
 const outputConsole = document.querySelector('.code-output-panel .output-body');
 
-const WASMEE_URL = 'http://127.0.0.1:8081';
+const WASMEE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://127.0.0.1:8081'
+  : (window.location.hostname.includes('test')
+    ? 'https://wasmee-engine-test-133825711702.us-central1.run.app'
+    : 'https://wasmee-engine-133825711702.us-central1.run.app');
 
 if (btnWarmup) {
   btnWarmup.addEventListener('click', async () => {
